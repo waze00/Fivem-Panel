@@ -1,4 +1,11 @@
-HTML = """
+import os
+import requests
+from flask import Flask, render_template_string
+
+app = Flask(__name__)
+
+# Tasarımın bozulmaması için HTML değişkenini buraya sabitledik
+HTML_SABLON = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -8,7 +15,7 @@ HTML = """
         body {
             margin: 0;
             background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             color: white;
             display: flex;
             flex-direction: column;
@@ -21,8 +28,6 @@ HTML = """
             border-bottom: 2px solid #ff4444;
             margin-bottom: 30px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
             box-sizing: border-box;
         }
         .logo { 
@@ -30,10 +35,9 @@ HTML = """
             font-weight: 900; 
             color: #ff4444; 
             letter-spacing: 4px;
+            margin: 0 auto;
         }
         .container { width: 90%; max-width: 1000px; }
-        
-        /* GÜNCELLENEN İSTATİSTİK KARTI */
         .stats-card {
             background: rgba(0,0,0,0.5);
             padding: 25px;
@@ -41,81 +45,42 @@ HTML = """
             margin-bottom: 20px;
             border: 1px solid #333;
             display: flex;
-            justify-content: space-between; /* Sol, Orta, Sağ boşlukları */
+            justify-content: space-between;
             align-items: center;
         }
-        .stats-side-text {
-            font-size: 20px;
-            font-weight: bold;
-            color: #ffffff;
-            width: 150px; /* Hizalamanın bozulmaması için sabit genişlik */
-        }
-        .text-left { text-align: left; }
-        .text-right { text-align: right; }
-        
-        .count { 
-            font-size: 28px; 
-            color: #00ff88; 
-            font-weight: bold; 
-            flex-grow: 1; 
-            text-align: center; 
-        }
-        /* --------------------------- */
-
+        .stats-side-text { font-size: 20px; font-weight: bold; width: 150px; }
+        .count { font-size: 28px; color: #00ff88; font-weight: bold; flex-grow: 1; text-align: center; }
         input#search {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            border: 2px solid #ff4444;
-            background: rgba(0,0,0,0.3);
-            color: white;
-            font-size: 16px;
-            outline: none;
-            box-sizing: border-box;
+            width: 100%; padding: 12px; margin-bottom: 20px;
+            border-radius: 8px; border: 2px solid #ff4444;
+            background: rgba(0,0,0,0.3); color: white; outline: none; box-sizing: border-box;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: rgba(0,0,0,0.6);
-            border-radius: 10px;
-            overflow: hidden;
-        }
+        table { width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.6); border-radius: 10px; overflow: hidden; }
         th { background: #111; color: #ff4444; padding: 15px; }
         td { padding: 12px; text-align: center; border-bottom: 1px solid #222; }
-        tr:hover { background: rgba(255,68,68,0.1); }
-        .steam { color: #1b9fff; font-size: 13px; font-weight: bold; }
-        .discord-id { color: #7289da; font-size: 13px; font-weight: bold; }
+        .steam { color: #1b9fff; font-size: 13px; }
+        .discord-id { color: #7289da; font-size: 13px; }
         .refresh-btn {
-            display: block;
-            margin: 10px auto 0 auto;
-            width: fit-content;
-            padding: 8px 20px;
-            background: #ff4444;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: bold;
+            display: block; margin: 10px auto; padding: 8px 20px;
+            background: #ff4444; color: white; text-decoration: none;
+            border-radius: 5px; font-weight: bold; width: fit-content;
         }
     </style>
 </head>
 <body>
 
-<div class="navbar">
-    <div class="logo" style="margin: 0 auto;">MDPVP</div> </div>
+<div class="navbar"><div class="logo">MDPVP</div></div>
 
 <div class="container">
     <div class="stats-card">
-        <div class="stats-side-text text-left">Waze</div>
+        <div class="stats-side-text" style="text-align: left;">Waze</div>
         <div class="count">Aktif Oyuncu: {{ count }}</div>
-        <div class="stats-side-text text-right">Lilknife</div>
+        <div class="stats-side-text" style="text-align: right;">Lilknife</div>
     </div>
     
-    <div style="text-align: center; margin-bottom: 20px;">
-        <a href="/" class="refresh-btn">Listeyi Yenile</a>
-    </div>
+    <div style="text-align: center;"><a href="/" class="refresh-btn">Listeyi Yenile</a></div>
 
-    <input type="text" id="search" placeholder="ID, İsim, Steam Hex veya Discord ID ile ara...">
+    <input type="text" id="search" placeholder="Ara...">
     
     <table id="playerTable">
         <thead>
@@ -140,24 +105,29 @@ HTML = """
 </div>
 
 <script>
-function filterTable() {
-    let input = document.getElementById("search");
-    let filter = input.value.toLowerCase();
-    let table = document.getElementById("playerTable");
-    let tr = table.getElementsByTagName("tr");
-
-    for (let i = 1; i < tr.length; i++) {
-        let rowContent = tr[i].textContent.toLowerCase();
-        if (rowContent.includes(filter)) {
-            tr[i].style.display = "";
-        } else {
-            tr[i].style.display = "none";
-        }
-    }
-}
-document.getElementById("search").addEventListener("keyup", filterTable);
+document.getElementById("search").addEventListener("keyup", function() {
+    let filter = this.value.toLowerCase();
+    let rows = document.querySelectorAll("#playerTable tbody tr");
+    rows.forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(filter) ? "" : "none";
+    });
+});
 </script>
 
 </body>
 </html>
 """
+
+@app.route('/')
+def home():
+    # TEST VERİSİ (Burayı FiveM IP'n ile bağlayabilirsin)
+    test_players = [
+        {"id": 1, "name": "Waze", "steam": "steam:1100001", "discord": "123456789"},
+        {"id": 2, "name": "Lilknife", "steam": "steam:1100002", "discord": "987654321"}
+    ]
+    return render_template_string(HTML_SABLON, count=len(test_players), players=test_players)
+
+if __name__ == "__main__":
+    # RENDER İÇİN EN ÖNEMLİ KISIM
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
