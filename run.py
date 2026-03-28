@@ -1,11 +1,3 @@
-from flask import Flask, render_template_string
-import requests
-
-app = Flask(__name__)
-
-# Sunucu ID
-SERVER_ID = "z5gxl9" 
-
 HTML = """
 <!DOCTYPE html>
 <html lang="tr">
@@ -22,7 +14,6 @@ HTML = """
             flex-direction: column;
             align-items: center;
         }
-        /* Navbar Düzenlemesi */
         .navbar {
             width: 100%;
             background: rgba(0,0,0,0.8);
@@ -30,49 +21,47 @@ HTML = """
             border-bottom: 2px solid #ff4444;
             margin-bottom: 30px;
             display: flex;
-            justify-content: space-between; /* Sol, Orta, Sağ hizalama */
+            justify-content: space-between;
             align-items: center;
             box-sizing: border-box;
         }
-        /* Sol Taraf: Waze & Lilknife */
-        .nav-left {
-            display: flex;
-            flex-direction: column;
-            text-align: left;
-        }
-        .author-text {
-            font-size: 20px; /* Bir tık büyütüldü */
-            color: #ffffff;
-            font-weight: 500;
-            line-height: 1.2;
-        }
-        /* Orta: MDPVP Başlık */
         .logo { 
             font-size: 36px; 
             font-weight: 900; 
             color: #ff4444; 
             letter-spacing: 4px;
         }
-        /* Sağ Taraf: Discord */
-        .nav-right {
-            text-align: right;
-        }
-        .discord-link {
-            font-size: 20px; /* Yazarlarla aynı boyda */
-            color: #ffffff;
-            text-decoration: none;
-            font-weight: 500;
-        }
         .container { width: 90%; max-width: 1000px; }
+        
+        /* GÜNCELLENEN İSTATİSTİK KARTI */
         .stats-card {
             background: rgba(0,0,0,0.5);
-            padding: 20px;
+            padding: 25px;
             border-radius: 15px;
-            text-align: center;
             margin-bottom: 20px;
             border: 1px solid #333;
+            display: flex;
+            justify-content: space-between; /* Sol, Orta, Sağ boşlukları */
+            align-items: center;
         }
-        .count { font-size: 28px; color: #00ff88; font-weight: bold; }
+        .stats-side-text {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffffff;
+            width: 150px; /* Hizalamanın bozulmaması için sabit genişlik */
+        }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+        
+        .count { 
+            font-size: 28px; 
+            color: #00ff88; 
+            font-weight: bold; 
+            flex-grow: 1; 
+            text-align: center; 
+        }
+        /* --------------------------- */
+
         input#search {
             width: 100%;
             padding: 12px;
@@ -98,8 +87,9 @@ HTML = """
         .steam { color: #1b9fff; font-size: 13px; font-weight: bold; }
         .discord-id { color: #7289da; font-size: 13px; font-weight: bold; }
         .refresh-btn {
-            display: inline-block;
-            margin-top: 10px;
+            display: block;
+            margin: 10px auto 0 auto;
+            width: fit-content;
             padding: 8px 20px;
             background: #ff4444;
             color: white;
@@ -112,26 +102,21 @@ HTML = """
 <body>
 
 <div class="navbar">
-    <div class="nav-left">
-        <span class="author-text">Waze</span>
-        <span class="author-text">Lilknife</span>
-    </div>
-    
-    <div class="logo">MDPVP</div>
-
-    <div class="nav-right">
-        <a href="https://discord.gg/a51" class="discord-link">discord.gg/a51</a>
-    </div>
-</div>
+    <div class="logo" style="margin: 0 auto;">MDPVP</div> </div>
 
 <div class="container">
     <div class="stats-card">
+        <div class="stats-side-text text-left">Waze</div>
         <div class="count">Aktif Oyuncu: {{ count }}</div>
+        <div class="stats-side-text text-right">Lilknife</div>
+    </div>
+    
+    <div style="text-align: center; margin-bottom: 20px;">
         <a href="/" class="refresh-btn">Listeyi Yenile</a>
     </div>
 
-    <input type="text" id="search" placeholder="ID, İsim, Steam Hex veya Discord ID ile ara..." onkeyup="filterTable()">
-
+    <input type="text" id="search" placeholder="ID, İsim, Steam Hex veya Discord ID ile ara...">
+    
     <table id="playerTable">
         <thead>
             <tr>
@@ -170,48 +155,9 @@ function filterTable() {
         }
     }
 }
+document.getElementById("search").addEventListener("keyup", filterTable);
 </script>
 
 </body>
 </html>
 """
-
-@app.route("/")
-def home():
-    try:
-        url = f"https://servers-frontend.fivem.net/api/servers/single/{SERVER_ID}"
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-        response = requests.get(url, headers=headers, timeout=10)
-        
-        if response.status_code != 200:
-            return f"<h1>FiveM API Hatası!</h1><p>Kod: {response.status_code}. Sunucu şu an yanıt vermiyor olabilir.</p>"
-
-        data = response.json()
-        server_data = data.get("Data", {})
-        players_raw = server_data.get("players") or server_data.get("clients") or []
-
-        players_list = []
-        for p in players_raw:
-            steam = "Bulunamadı"
-            discord = "Bağlı Değil"
-            identifiers = p.get("identifiers", [])
-            for identifier in identifiers:
-                if identifier.startswith("steam:"):
-                    steam = identifier.replace("steam:", "")
-                elif identifier.startswith("discord:"):
-                    discord = identifier.replace("discord:", "")
-
-            players_list.append({
-                "id": p.get("id", "??"),
-                "name": p.get("name", "Bilinmiyor"),
-                "steam": steam,
-                "discord": discord
-            })
-
-        return render_template_string(HTML, players=players_list, count=len(players_list))
-
-    except Exception as e:
-        return f"<h1>Bir Hata Oluştu</h1><p>{str(e)}</p>"
-
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
