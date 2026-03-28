@@ -4,18 +4,21 @@ from flask import Flask, render_template_string
 
 app = Flask(__name__)
 
-# Tasarımın ve Tablonun Olduğu HTML Şablonu
-HTML_SABLON = """
+# SUNUCU ID (Cfx.re Kodu)
+SERVER_ID = "z5gxl9" 
+
+# Görünüm Ayarları (Tasarım ve Waze/Lilknife korundu)
+HTML = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>MDPVP Canlı Oyuncu Paneli</title>
+    <title>MDPVP Oyuncu Paneli</title>
     <style>
         body {
             margin: 0;
             background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: white;
             display: flex;
             flex-direction: column;
@@ -28,16 +31,11 @@ HTML_SABLON = """
             border-bottom: 2px solid #ff4444;
             margin-bottom: 30px;
             display: flex;
+            justify-content: center;
             box-sizing: border-box;
         }
-        .logo { 
-            font-size: 36px; 
-            font-weight: 900; 
-            color: #ff4444; 
-            letter-spacing: 4px;
-            margin: 0 auto;
-        }
-        .container { width: 95%; max-width: 1100px; }
+        .logo { font-size: 36px; font-weight: 900; color: #ff4444; letter-spacing: 4px; }
+        .container { width: 90%; max-width: 1000px; }
         .stats-card {
             background: rgba(0,0,0,0.5);
             padding: 25px;
@@ -48,25 +46,23 @@ HTML_SABLON = """
             justify-content: space-between;
             align-items: center;
         }
-        .stats-side-text { font-size: 20px; font-weight: bold; width: 150px; }
+        .stats-side-text { font-size: 20px; font-weight: bold; color: #ffffff; width: 150px; }
         .count { font-size: 28px; color: #00ff88; font-weight: bold; flex-grow: 1; text-align: center; }
         input#search {
-            width: 100%; padding: 15px; margin-bottom: 20px;
+            width: 100%; padding: 12px; margin-bottom: 20px;
             border-radius: 8px; border: 2px solid #ff4444;
-            background: rgba(0,0,0,0.3); color: white; outline: none; box-sizing: border-box;
-            font-size: 16px;
+            background: rgba(0,0,0,0.3); color: white; font-size: 16px; outline: none; box-sizing: border-box;
         }
         table { width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.6); border-radius: 10px; overflow: hidden; }
-        th { background: #111; color: #ff4444; padding: 15px; text-transform: uppercase; }
+        th { background: #111; color: #ff4444; padding: 15px; }
         td { padding: 12px; text-align: center; border-bottom: 1px solid #222; }
-        tr:hover { background: rgba(255, 68, 68, 0.1); }
-        .steam { color: #1b9fff; font-size: 12px; font-family: monospace; }
-        .discord-id { color: #7289da; font-size: 12px; font-family: monospace; }
+        tr:hover { background: rgba(255,68,68,0.1); }
+        .steam { color: #1b9fff; font-size: 13px; font-weight: bold; }
+        .discord { color: #7289da; font-size: 13px; font-weight: bold; }
         .refresh-btn {
-            display: block; margin: 10px auto 20px auto; padding: 10px 25px;
+            display: inline-block; margin-top: 10px; padding: 10px 25px;
             background: #ff4444; color: white; text-decoration: none;
-            border-radius: 5px; font-weight: bold; width: fit-content;
-            transition: 0.3s;
+            border-radius: 5px; font-weight: bold; transition: 0.3s;
         }
         .refresh-btn:hover { background: #cc0000; transform: scale(1.05); }
     </style>
@@ -82,14 +78,16 @@ HTML_SABLON = """
         <div class="stats-side-text" style="text-align: right;">Lilknife</div>
     </div>
     
-    <div style="text-align: center;"><a href="/" class="refresh-btn">🔄 Verileri Güncelle</a></div>
+    <div style="text-align: center; margin-bottom: 20px;">
+        <a href="/" class="refresh-btn">🔄 Listeyi Yenile</a>
+    </div>
 
-    <input type="text" id="search" placeholder="İsim, ID veya Hex kodu ile oyuncu ara...">
-    
+    <input type="text" id="search" placeholder="ID, İsim, Hex veya Discord ile ara..." onkeyup="filterTable()">
+
     <table id="playerTable">
         <thead>
             <tr>
-                <th>Sunucu ID</th>
+                <th>ID</th>
                 <th>Oyuncu Adı</th>
                 <th>Steam Hex</th>
                 <th>Discord ID</th>
@@ -98,55 +96,65 @@ HTML_SABLON = """
         <tbody>
             {% for player in players %}
             <tr>
-                <td><strong>{{ player.id }}</strong></td>
-                <td>{{ player.name }}</td>
-                <td class="steam">{{ player.identifiers | select('darkblue', 'steam:') | first | default('Yok') }}</td>
-                <td class="discord-id">{{ player.identifiers | select('darkblue', 'discord:') | first | default('Bağlı Değil') }}</td>
+                <td>{{ player.id }}</td>
+                <td><strong>{{ player.name }}</strong></td>
+                <td class="steam">{{ player.steam }}</td>
+                <td class="discord">{{ player.discord }}</td>
             </tr>
             {% endfor %}
-            {% if not players %}
-            <tr>
-                <td colspan="4" style="padding: 50px; color: #aaa;">Şu an sunucuda kimse yok veya sunucuya bağlanılamıyor.</td>
-            </tr>
-            {% endif %}
         </tbody>
     </table>
 </div>
 
 <script>
-document.getElementById("search").addEventListener("keyup", function() {
-    let filter = this.value.toLowerCase();
-    let rows = document.querySelectorAll("#playerTable tbody tr");
-    rows.forEach(row => {
-        row.style.display = row.textContent.toLowerCase().includes(filter) ? "" : "none";
-    });
-});
+function filterTable() {
+    let input = document.getElementById("search");
+    let filter = input.value.toLowerCase();
+    let tr = document.getElementById("playerTable").getElementsByTagName("tr");
+    for (let i = 1; i < tr.length; i++) {
+        tr[i].style.display = tr[i].textContent.toLowerCase().includes(filter) ? "" : "none";
+    }
+}
 </script>
-
 </body>
 </html>
 """
 
-@app.route('/')
+@app.route("/")
 def home():
-    # BURAYI DÜZENLE: Kendi sunucu IP ve Portunu yaz (Örn: http://1.2.3.4:30120)
-    SUNUCU_IP = "IP_ADRESI" 
-    SUNUCU_PORT = "30120"
-    API_URL = f"http://{SUNUCU_IP}:{SUNUCU_PORT}/players.json"
-
     try:
-        # Sunucudan gerçek oyuncu listesini çekiyoruz
-        response = requests.get(API_URL, timeout=5)
-        if response.status_code == 200:
-            players_data = response.json()
-        else:
-            players_data = []
-    except Exception as e:
-        print(f"Hata: {e}")
-        players_data = []
+        # Cfx.re API'si üzerinden veri çekme
+        url = f"https://servers-frontend.fivem.net/api/servers/single/{SERVER_ID}"
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            return f"<h1>Hata!</h1><p>API Yanıt Vermedi: {response.status_code}</p>"
 
-    return render_template_string(HTML_SABLON, count=len(players_data), players=players_data)
+        data = response.json().get("Data", {})
+        players_raw = data.get("players") or []
+        
+        players_list = []
+        for p in players_raw:
+            steam, discord = "Bulunamadı", "Bağlı Değil"
+            for identifier in p.get("identifiers", []):
+                if "steam:" in identifier: steam = identifier.replace("steam:", "")
+                elif "discord:" in identifier: discord = identifier.replace("discord:", "")
+
+            players_list.append({
+                "id": p.get("id", "??"),
+                "name": p.get("name", "Bilinmiyor"),
+                "steam": steam,
+                "discord": discord
+            })
+
+        return render_template_string(HTML, players=players_list, count=len(players_list))
+
+    except Exception as e:
+        return f"<h1>Hata Oluştu</h1><p>{str(e)}</p>"
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
+    # Render için portu dinamik alıyoruz
+    port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
