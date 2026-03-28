@@ -4,13 +4,13 @@ from flask import Flask, render_template_string
 
 app = Flask(__name__)
 
-# Tasarımın bozulmaması için HTML değişkenini buraya sabitledik
+# Tasarımın ve Tablonun Olduğu HTML Şablonu
 HTML_SABLON = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>MDPVP Oyuncu Paneli</title>
+    <title>MDPVP Canlı Oyuncu Paneli</title>
     <style>
         body {
             margin: 0;
@@ -37,7 +37,7 @@ HTML_SABLON = """
             letter-spacing: 4px;
             margin: 0 auto;
         }
-        .container { width: 90%; max-width: 1000px; }
+        .container { width: 95%; max-width: 1100px; }
         .stats-card {
             background: rgba(0,0,0,0.5);
             padding: 25px;
@@ -51,20 +51,24 @@ HTML_SABLON = """
         .stats-side-text { font-size: 20px; font-weight: bold; width: 150px; }
         .count { font-size: 28px; color: #00ff88; font-weight: bold; flex-grow: 1; text-align: center; }
         input#search {
-            width: 100%; padding: 12px; margin-bottom: 20px;
+            width: 100%; padding: 15px; margin-bottom: 20px;
             border-radius: 8px; border: 2px solid #ff4444;
             background: rgba(0,0,0,0.3); color: white; outline: none; box-sizing: border-box;
+            font-size: 16px;
         }
         table { width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.6); border-radius: 10px; overflow: hidden; }
-        th { background: #111; color: #ff4444; padding: 15px; }
+        th { background: #111; color: #ff4444; padding: 15px; text-transform: uppercase; }
         td { padding: 12px; text-align: center; border-bottom: 1px solid #222; }
-        .steam { color: #1b9fff; font-size: 13px; }
-        .discord-id { color: #7289da; font-size: 13px; }
+        tr:hover { background: rgba(255, 68, 68, 0.1); }
+        .steam { color: #1b9fff; font-size: 12px; font-family: monospace; }
+        .discord-id { color: #7289da; font-size: 12px; font-family: monospace; }
         .refresh-btn {
-            display: block; margin: 10px auto; padding: 8px 20px;
+            display: block; margin: 10px auto 20px auto; padding: 10px 25px;
             background: #ff4444; color: white; text-decoration: none;
             border-radius: 5px; font-weight: bold; width: fit-content;
+            transition: 0.3s;
         }
+        .refresh-btn:hover { background: #cc0000; transform: scale(1.05); }
     </style>
 </head>
 <body>
@@ -78,14 +82,14 @@ HTML_SABLON = """
         <div class="stats-side-text" style="text-align: right;">Lilknife</div>
     </div>
     
-    <div style="text-align: center;"><a href="/" class="refresh-btn">Listeyi Yenile</a></div>
+    <div style="text-align: center;"><a href="/" class="refresh-btn">🔄 Verileri Güncelle</a></div>
 
-    <input type="text" id="search" placeholder="Ara...">
+    <input type="text" id="search" placeholder="İsim, ID veya Hex kodu ile oyuncu ara...">
     
     <table id="playerTable">
         <thead>
             <tr>
-                <th>ID</th>
+                <th>Sunucu ID</th>
                 <th>Oyuncu Adı</th>
                 <th>Steam Hex</th>
                 <th>Discord ID</th>
@@ -94,12 +98,17 @@ HTML_SABLON = """
         <tbody>
             {% for player in players %}
             <tr>
-                <td>{{ player.id }}</td>
-                <td><strong>{{ player.name }}</strong></td>
-                <td class="steam">{{ player.steam }}</td>
-                <td class="discord-id">{{ player.discord }}</td>
+                <td><strong>{{ player.id }}</strong></td>
+                <td>{{ player.name }}</td>
+                <td class="steam">{{ player.identifiers | select('darkblue', 'steam:') | first | default('Yok') }}</td>
+                <td class="discord-id">{{ player.identifiers | select('darkblue', 'discord:') | first | default('Bağlı Değil') }}</td>
             </tr>
             {% endfor %}
+            {% if not players %}
+            <tr>
+                <td colspan="4" style="padding: 50px; color: #aaa;">Şu an sunucuda kimse yok veya sunucuya bağlanılamıyor.</td>
+            </tr>
+            {% endif %}
         </tbody>
     </table>
 </div>
@@ -120,14 +129,24 @@ document.getElementById("search").addEventListener("keyup", function() {
 
 @app.route('/')
 def home():
-    # TEST VERİSİ (Burayı FiveM IP'n ile bağlayabilirsin)
-    test_players = [
-        {"id": 1, "name": "Waze", "steam": "steam:1100001", "discord": "123456789"},
-        {"id": 2, "name": "Lilknife", "steam": "steam:1100002", "discord": "987654321"}
-    ]
-    return render_template_string(HTML_SABLON, count=len(test_players), players=test_players)
+    # BURAYI DÜZENLE: Kendi sunucu IP ve Portunu yaz (Örn: http://1.2.3.4:30120)
+    SUNUCU_IP = "IP_ADRESI" 
+    SUNUCU_PORT = "30120"
+    API_URL = f"http://{SUNUCU_IP}:{SUNUCU_PORT}/players.json"
+
+    try:
+        # Sunucudan gerçek oyuncu listesini çekiyoruz
+        response = requests.get(API_URL, timeout=5)
+        if response.status_code == 200:
+            players_data = response.json()
+        else:
+            players_data = []
+    except Exception as e:
+        print(f"Hata: {e}")
+        players_data = []
+
+    return render_template_string(HTML_SABLON, count=len(players_data), players=players_data)
 
 if __name__ == "__main__":
-    # RENDER İÇİN EN ÖNEMLİ KISIM
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
