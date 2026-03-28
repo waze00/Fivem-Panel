@@ -8,12 +8,13 @@ app = Flask(__name__)
 SERVER_ID = "z5gxl9" 
 
 # Görünüm (Arayüz) Ayarları
+# Değişiklikler: Ana başlık MDPVP oldu ve rengi KIRMIZI yapıldı.
 HTML = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>MDRP FiveM Oyuncu Paneli</title>
+    <title>MDPVP FiveM Oyuncu Paneli</title>
     <style>
         body {
             margin: 0;
@@ -27,12 +28,27 @@ HTML = """
         .navbar {
             width: 100%;
             background: rgba(0,0,0,0.8);
-            padding: 15px 0;
+            padding: 20px 0;
             text-align: center;
-            border-bottom: 2px solid #00ffcc;
+            border-bottom: 2px solid #00ffcc; /* İsteğe bağlı olarak bu çizgiyi de kırmızı yapabiliriz: #ff4444 */
             margin-bottom: 30px;
         }
-        .logo { font-size: 24px; font-weight: bold; color: #00ffcc; letter-spacing: 2px; }
+        /* Başlık rengi kırmızı (#ff4444) olarak değiştirildi ve MDPVP yazıldı */
+        .logo { 
+            font-size: 28px; 
+            font-weight: bold; 
+            color: #ff4444; 
+            letter-spacing: 2px; 
+            margin-bottom: 5px;
+        }
+        /* Waze Lilknife yazısı için alt başlık stili (beyaz kalıyor) */
+        .sub-logo {
+            font-size: 16px;
+            color: #ffffff;
+            opacity: 0.8;
+            letter-spacing: 1px;
+            font-weight: 300;
+        }
         .container { width: 90%; max-width: 1000px; }
         .stats-card {
             background: rgba(0,0,0,0.5);
@@ -82,7 +98,8 @@ HTML = """
 <body>
 
 <div class="navbar">
-    <div class="logo">MDRP FIVEM PANEL</div>
+    <div class="logo">MDPVP FIVEM PANEL</div>
+    <div class="sub-logo">Waze Lilknife</div>
 </div>
 
 <div class="container">
@@ -122,10 +139,8 @@ function filterTable() {
     let table = document.getElementById("playerTable");
     let tr = table.getElementsByTagName("tr");
 
-    // Tablo başlığı hariç (i=1) tüm satırları dön
     for (let i = 1; i < tr.length; i++) {
         let rowContent = tr[i].textContent.toLowerCase();
-        // Eğer satırın herhangi bir yerinde aranan kelime geçiyorsa göster, geçmiyorsa gizle
         if (rowContent.includes(filter)) {
             tr[i].style.display = "";
         } else {
