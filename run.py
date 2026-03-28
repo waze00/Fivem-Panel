@@ -4,10 +4,10 @@ from flask import Flask, render_template_string
 
 app = Flask(__name__)
 
-# SUNUCU ID (Cfx.re Kodu)
+# SUNUCU ID
 SERVER_ID = "z5gxl9" 
 
-# Görünüm Ayarları (Tasarım ve Waze/Lilknife korundu)
+# Görünüm Ayarları
 HTML = """
 <!DOCTYPE html>
 <html lang="tr">
@@ -31,11 +31,31 @@ HTML = """
             border-bottom: 2px solid #ff4444;
             margin-bottom: 30px;
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
+            align-items: center;
             box-sizing: border-box;
         }
-        .logo { font-size: 36px; font-weight: 900; color: #ff4444; letter-spacing: 4px; }
-        .container { width: 90%; max-width: 1000px; }
+        .logo { 
+            font-size: 36px; 
+            font-weight: 900; 
+            color: #ff4444; 
+            letter-spacing: 4px;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .discord-link {
+            color: white; /* Normal rengi beyaz */
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: bold;
+            transition: 0.3s;
+            margin-left: auto; /* En sağa yaslar */
+        }
+        .discord-link:hover {
+            color: #007bff; /* Mouse üstüne gelince mavi */
+        }
+        .container { width: 90%; max-width: 1000px; margin-top: 20px; }
         .stats-card {
             background: rgba(0,0,0,0.5);
             padding: 25px;
@@ -58,18 +78,20 @@ HTML = """
         td { padding: 12px; text-align: center; border-bottom: 1px solid #222; }
         tr:hover { background: rgba(255,68,68,0.1); }
         .steam { color: #1b9fff; font-size: 13px; font-weight: bold; }
-        .discord { color: #7289da; font-size: 13px; font-weight: bold; }
+        .discord-id { color: #7289da; font-size: 13px; font-weight: bold; }
         .refresh-btn {
-            display: inline-block; margin-top: 10px; padding: 10px 25px;
+            display: inline-block; padding: 10px 25px;
             background: #ff4444; color: white; text-decoration: none;
-            border-radius: 5px; font-weight: bold; transition: 0.3s;
+            border-radius: 5px; font-weight: bold; margin-bottom: 20px;
         }
-        .refresh-btn:hover { background: #cc0000; transform: scale(1.05); }
     </style>
 </head>
 <body>
 
-<div class="navbar"><div class="logo">MDPVP</div></div>
+<div class="navbar">
+    <div class="logo">MDPVP</div>
+    <a href="https://discord.gg/a51" target="_blank" class="discord-link">discord.gg/a51</a>
+</div>
 
 <div class="container">
     <div class="stats-card">
@@ -78,7 +100,7 @@ HTML = """
         <div class="stats-side-text" style="text-align: right;">Lilknife</div>
     </div>
     
-    <div style="text-align: center; margin-bottom: 20px;">
+    <div style="text-align: center;">
         <a href="/" class="refresh-btn">🔄 Listeyi Yenile</a>
     </div>
 
@@ -99,7 +121,7 @@ HTML = """
                 <td>{{ player.id }}</td>
                 <td><strong>{{ player.name }}</strong></td>
                 <td class="steam">{{ player.steam }}</td>
-                <td class="discord">{{ player.discord }}</td>
+                <td class="discord-id">{{ player.discord }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -123,38 +145,25 @@ function filterTable() {
 @app.route("/")
 def home():
     try:
-        # Cfx.re API'si üzerinden veri çekme
         url = f"https://servers-frontend.fivem.net/api/servers/single/{SERVER_ID}"
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-        
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         response = requests.get(url, headers=headers, timeout=10)
         
-        if response.status_code != 200:
-            return f"<h1>Hata!</h1><p>API Yanıt Vermedi: {response.status_code}</p>"
-
-        data = response.json().get("Data", {})
-        players_raw = data.get("players") or []
-        
         players_list = []
-        for p in players_raw:
-            steam, discord = "Bulunamadı", "Bağlı Değil"
-            for identifier in p.get("identifiers", []):
-                if "steam:" in identifier: steam = identifier.replace("steam:", "")
-                elif "discord:" in identifier: discord = identifier.replace("discord:", "")
-
-            players_list.append({
-                "id": p.get("id", "??"),
-                "name": p.get("name", "Bilinmiyor"),
-                "steam": steam,
-                "discord": discord
-            })
+        if response.status_code == 200:
+            data = response.json().get("Data", {})
+            players_raw = data.get("players") or []
+            for p in players_raw:
+                steam, discord = "Yok", "Bağlı Değil"
+                for identifier in p.get("identifiers", []):
+                    if "steam:" in identifier: steam = identifier.replace("steam:", "")
+                    elif "discord:" in identifier: discord = identifier.replace("discord:", "")
+                players_list.append({"id": p.get("id"), "name": p.get("name"), "steam": steam, "discord": discord})
 
         return render_template_string(HTML, players=players_list, count=len(players_list))
-
     except Exception as e:
-        return f"<h1>Hata Oluştu</h1><p>{str(e)}</p>"
+        return f"Hata: {str(e)}"
 
 if __name__ == "__main__":
-    # Render için portu dinamik alıyoruz
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
