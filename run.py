@@ -1,20 +1,17 @@
 from flask import Flask, render_template_string
 import requests
 
-# Flask uygulamasını başlatıyoruz
 app = Flask(__name__)
 
-# BURASI ÖNEMLİ: Kendi sunucu kodunu buraya yaz
+# Sunucu ID
 SERVER_ID = "z5gxl9" 
 
-# Görünüm (Arayüz) Ayarları
-# Değişiklikler: Ana başlık MDPVP oldu ve rengi KIRMIZI yapıldı.
 HTML = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>MDPVP FiveM Oyuncu Paneli</title>
+    <title>MDPVP Oyuncu Paneli</title>
     <style>
         body {
             margin: 0;
@@ -25,29 +22,46 @@ HTML = """
             flex-direction: column;
             align-items: center;
         }
+        /* Navbar Düzenlemesi */
         .navbar {
             width: 100%;
             background: rgba(0,0,0,0.8);
-            padding: 20px 0;
-            text-align: center;
-            border-bottom: 2px solid #00ffcc; /* İsteğe bağlı olarak bu çizgiyi de kırmızı yapabiliriz: #ff4444 */
+            padding: 15px 40px;
+            border-bottom: 2px solid #ff4444;
             margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between; /* Sol, Orta, Sağ hizalama */
+            align-items: center;
+            box-sizing: border-box;
         }
-        /* Başlık rengi kırmızı (#ff4444) olarak değiştirildi ve MDPVP yazıldı */
-        .logo { 
-            font-size: 28px; 
-            font-weight: bold; 
-            color: #ff4444; 
-            letter-spacing: 2px; 
-            margin-bottom: 5px;
+        /* Sol Taraf: Waze & Lilknife */
+        .nav-left {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
         }
-        /* Waze Lilknife yazısı için alt başlık stili (beyaz kalıyor) */
-        .sub-logo {
-            font-size: 16px;
+        .author-text {
+            font-size: 20px; /* Bir tık büyütüldü */
             color: #ffffff;
-            opacity: 0.8;
-            letter-spacing: 1px;
-            font-weight: 300;
+            font-weight: 500;
+            line-height: 1.2;
+        }
+        /* Orta: MDPVP Başlık */
+        .logo { 
+            font-size: 36px; 
+            font-weight: 900; 
+            color: #ff4444; 
+            letter-spacing: 4px;
+        }
+        /* Sağ Taraf: Discord */
+        .nav-right {
+            text-align: right;
+        }
+        .discord-link {
+            font-size: 20px; /* Yazarlarla aynı boyda */
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 500;
         }
         .container { width: 90%; max-width: 1000px; }
         .stats-card {
@@ -64,7 +78,7 @@ HTML = """
             padding: 12px;
             margin-bottom: 20px;
             border-radius: 8px;
-            border: 2px solid #00ffcc;
+            border: 2px solid #ff4444;
             background: rgba(0,0,0,0.3);
             color: white;
             font-size: 16px;
@@ -78,17 +92,17 @@ HTML = """
             border-radius: 10px;
             overflow: hidden;
         }
-        th { background: #111; color: #00ffcc; padding: 15px; }
+        th { background: #111; color: #ff4444; padding: 15px; }
         td { padding: 12px; text-align: center; border-bottom: 1px solid #222; }
-        tr:hover { background: rgba(0,255,204,0.1); }
+        tr:hover { background: rgba(255,68,68,0.1); }
         .steam { color: #1b9fff; font-size: 13px; font-weight: bold; }
-        .discord { color: #7289da; font-size: 13px; font-weight: bold; }
+        .discord-id { color: #7289da; font-size: 13px; font-weight: bold; }
         .refresh-btn {
             display: inline-block;
             margin-top: 10px;
             padding: 8px 20px;
-            background: #00ffcc;
-            color: black;
+            background: #ff4444;
+            color: white;
             text-decoration: none;
             border-radius: 5px;
             font-weight: bold;
@@ -98,8 +112,16 @@ HTML = """
 <body>
 
 <div class="navbar">
-    <div class="logo">MDPVP FIVEM PANEL</div>
-    <div class="sub-logo">Waze Lilknife</div>
+    <div class="nav-left">
+        <span class="author-text">Waze</span>
+        <span class="author-text">Lilknife</span>
+    </div>
+    
+    <div class="logo">MDPVP</div>
+
+    <div class="nav-right">
+        <a href="https://discord.gg/a51" class="discord-link">discord.gg/a51</a>
+    </div>
 </div>
 
 <div class="container">
@@ -125,7 +147,7 @@ HTML = """
                 <td>{{ player.id }}</td>
                 <td><strong>{{ player.name }}</strong></td>
                 <td class="steam">{{ player.steam }}</td>
-                <td class="discord">{{ player.discord }}</td>
+                <td class="discord-id">{{ player.discord }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -159,7 +181,6 @@ def home():
     try:
         url = f"https://servers-frontend.fivem.net/api/servers/single/{SERVER_ID}"
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-        
         response = requests.get(url, headers=headers, timeout=10)
         
         if response.status_code != 200:
@@ -173,8 +194,6 @@ def home():
         for p in players_raw:
             steam = "Bulunamadı"
             discord = "Bağlı Değil"
-            
-            # Identifiers içinden Steam ve Discord'u ayıklama
             identifiers = p.get("identifiers", [])
             for identifier in identifiers:
                 if identifier.startswith("steam:"):
