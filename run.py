@@ -5,12 +5,6 @@ from flask import Flask, render_template_string, url_for, request
 app = Flask(__name__)
 
 # --- SUNUCU TANIMLAMALARI ---
-# id: FiveM sunucu kodu
-# name: Sayfa başlığında ve kartta görünen tam isim
-# short_name: Sol üstte logonun yanında yazacak kısa isim
-# logo: static klasöründeki dosya adı (uzantılarıyla birlikte)
-# primary_color: Arka plan ışıması, başlıklar ve ana vurgu rengi (HEX kodu)
-# accent_color: Oyuncu sayısı ve yan vurgu rengi (HEX kodu)
 SERVERS = [
     {
         "id": "z5gxl9", 
@@ -59,7 +53,6 @@ WAZE_ID = "827593836229296188"
 LILKNIFE_ID = "821434006843031624"
 
 # --- HTML/CSS ŞABLONU ---
-# CSS değişkenlerini (--primary ve --accent) sunucu renklerine göre dinamik hale getirdik.
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="tr">
@@ -71,28 +64,22 @@ HTML_TEMPLATE = """
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            /* BURASI DİNAMİK OLDU: Sunucunun renklerini kullanıyor */
             --primary: {{ current_server.primary_color }};
             --accent: {{ current_server.accent_color }};
-            
             --bg: #050507;
             --card: rgba(18, 18, 22, 0.95);
             --discord-blue: #5865F2;
             --sidebar-bg: rgba(10, 10, 12, 0.98);
         }
-
         body { margin: 0; background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
-        
         body::before {
             content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            /* BURASI DİNAMİK: Arka plan ışıması ana rengi kullanıyor */
             background-image: radial-gradient(circle at 50% 50%, var(--primary) 0%, transparent 50%),
                 linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px), 
                 linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
             background-size: 100% 100%, 50px 50px, 50px 50px; z-index: -1;
-            opacity: 0.1; /* Çok parlak olmaması için opasiteyi düşürdük */
+            opacity: 0.1;
         }
-
         .sidebar {
             position: fixed; top: 0; left: -300px; width: 280px; height: 100%;
             background: var(--sidebar-bg); border-right: 1px solid var(--primary);
@@ -107,74 +94,45 @@ HTML_TEMPLATE = """
             transition: 0.3s;
         }
         .server-item:hover { background: rgba(255,255,255,0.08); transform: translateX(5px); }
-        .server-item.active { border: 1px solid var(--accent); } /* Aktif sunucu vurgu rengini kullanıyor */
-        
+        .server-item.active { border: 1px solid var(--accent); }
         .overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.7); display: none; z-index: 1999; backdrop-filter: blur(3px);
         }
         .overlay.active { display: block; }
-
         .navbar { 
             padding: 10px 5%; background: rgba(0, 0, 0, 0.9); 
             border-bottom: 2px solid var(--primary); display: flex; 
             justify-content: space-between; align-items: center; 
             position: sticky; top: 0; z-index: 1000;
         }
-        
-        .menu-btn {
-            color: #fff; font-size: 24px; cursor: pointer; transition: 0.3s;
-            padding: 5px 15px; border-radius: 5px; margin-right: 10px;
-        }
+        .menu-btn { color: #fff; font-size: 24px; cursor: pointer; transition: 0.3s; padding: 5px 15px; border-radius: 5px; margin-right: 10px; }
         .menu-btn:hover { color: var(--primary); background: rgba(255,255,255,0.05); }
-
         .logo-box { display: flex; align-items: center; }
-        /* BURASI DİNAMİK: Logonun etrafındaki parlama ana rengi kullanıyor */
         .nav-logo { height: 60px; filter: drop-shadow(0 0 15px var(--primary)); transition: 0.5s ease; }
         .logo-text { font-family: 'Audiowide'; font-size: 26px; color: #fff; margin-left: 10px; }
-        /* BURASI DİNAMİK: Sunucu etiketi vurgu rengini kullanıyor */
         .current-tag { font-family: 'Orbitron'; font-size: 10px; color: var(--accent); margin-left: 10px; border: 1px solid var(--accent); padding: 2px 6px; border-radius: 4px; }
-
         .discord-link { font-family: 'Orbitron'; color: #fff; text-decoration: none; font-size: 14px; font-weight: 800; transition: 0.3s; }
         .discord-link:hover { color: var(--discord-blue); }
-
         .container { width: 90%; max-width: 1200px; margin: 40px auto; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
-
-        .card {
-            background: var(--card); border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 15px; padding: 30px 20px; text-align: center;
-            transition: 0.3s ease; cursor: pointer;
-        }
+        .card { background: var(--card); border: 1px solid rgba(255,255,255,0.05); border-radius: 15px; padding: 30px 20px; text-align: center; transition: 0.3s ease; cursor: pointer; }
         .card:hover { border-color: var(--primary); transform: translateY(-5px); }
-
         .admin-name { font-family: 'Orbitron'; font-size: 30px; font-weight: 900; color: #fff; margin-bottom: 10px; display: block; }
         .admin-img { width: 100px; height: 100px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); margin-bottom: 10px; }
-        /* BURASI DİNAMİK: Oyuncu sayısı vurgu rengini kullanıyor */
         .player-val { font-family: 'Orbitron'; font-size: 50px; color: var(--accent); text-shadow: 0 0 20px var(--accent); }
         .label-small { color: #555; font-size: 10px; letter-spacing: 2px; font-weight: 800; margin-bottom: 5px; display: block; }
-
         .search-area { display: flex; gap: 10px; margin-bottom: 20px; }
         .search-input { flex-grow: 1; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; outline: none; }
         .search-input:focus { border-color: var(--primary); }
-
         .refresh-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 15px; border-radius: 10px; cursor: pointer; }
         .refresh-btn:hover { background: var(--primary); }
-        
         .table-wrap { background: var(--card); border-radius: 15px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
         table { width: 100%; border-collapse: collapse; }
-        /* BURASI DİNAMİK: Tablo başlıkları ana rengi kullanıyor */
         th { background: rgba(0,0,0,0.3); padding: 15px; text-align: left; color: var(--primary); font-family: 'Orbitron'; font-size: 10px; }
         td { padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 14px; }
-
-        #toast {
-            visibility: hidden; min-width: 200px; background-color: var(--primary);
-            color: #fff; text-align: center; border-radius: 8px; padding: 12px;
-            position: fixed; z-index: 3000; left: 50%; bottom: 30px;
-            transform: translateX(-50%); font-weight: bold;
-        }
+        #toast { visibility: hidden; min-width: 200px; background-color: var(--primary); color: #fff; text-align: center; border-radius: 8px; padding: 12px; position: fixed; z-index: 3000; left: 50%; bottom: 30px; transform: translateX(-50%); font-weight: bold; }
         #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-
         @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
         @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
         @keyframes fa-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -182,7 +140,6 @@ HTML_TEMPLATE = """
     </style>
 </head>
 <body>
-
 <div class="overlay" id="overlay"></div>
 <div class="sidebar" id="sidebar">
     <div class="sidebar-header">SUNUCU SEÇİMİ</div>
@@ -193,7 +150,6 @@ HTML_TEMPLATE = """
     </a>
     {% endfor %}
 </div>
-
 <nav class="navbar">
     <div class="logo-box">
         <div class="menu-btn" onclick="toggleMenu()">
@@ -207,7 +163,6 @@ HTML_TEMPLATE = """
         <a href="https://discord.gg/a51" target="_blank" class="discord-link">discord.gg/a51</a>
     </div>
 </nav>
-
 <div class="container">
     <div class="stats-grid">
         <div class="card" onclick="copyAndOpen('{{ waze_id }}', 'Waze')">
@@ -216,12 +171,10 @@ HTML_TEMPLATE = """
             <span class="admin-name">Waze</span>
             <span style="font-size: 9px; color: #555;">ID KOPYALAMAK İÇİN TIKLA</span>
         </div>
-
         <div class="card" style="cursor: default; border-bottom: 3px solid var(--accent);">
             <span class="label-small" style="color: var(--accent)">AKTİF OYUNCU ({{ current_server.name }})</span>
             <div class="player-val">{{ count }}</div>
         </div>
-
         <div class="card" onclick="copyAndOpen('{{ lilknife_id }}', 'Lilknife')">
             <span class="label-small">SUNUCU SAHİBİ</span>
             <img src="{{ url_for('static', filename='lilknife.png') }}" class="admin-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
@@ -229,14 +182,12 @@ HTML_TEMPLATE = """
             <span style="font-size: 9px; color: #555;">ID KOPYALAMAK İÇİN TIKLA</span>
         </div>
     </div>
-
     <div class="search-area">
         <input type="text" id="search" class="search-input" placeholder="Oyuncu ara..." onkeyup="filterTable()">
         <button class="refresh-btn" onclick="refreshPage(this)">
             <i class="fas fa-sync-alt"></i>
         </button>
     </div>
-
     <div class="table-wrap">
         <table id="playerTable">
             <thead>
@@ -262,21 +213,17 @@ HTML_TEMPLATE = """
         </table>
     </div>
 </div>
-
 <div id="toast">ID Kopyalandı!</div>
-
 <script>
 function toggleMenu() {
     document.getElementById('sidebar').classList.toggle('active');
     document.getElementById('overlay').classList.toggle('active');
 }
 document.getElementById('overlay').onclick = toggleMenu;
-
 function refreshPage(btn) {
     btn.querySelector('i').classList.add('spin');
     setTimeout(() => { window.location.reload(); }, 300);
 }
-
 function copyAndOpen(id, name) {
     const el = document.createElement('textarea');
     el.value = id;
@@ -290,7 +237,6 @@ function copyAndOpen(id, name) {
     setTimeout(function(){ toast.className = "hide"; }, 3000);
     window.location.href = "discord://"; 
 }
-
 function filterTable() {
     let input = document.getElementById("search");
     let filter = input.value.toLowerCase();
@@ -306,42 +252,36 @@ function filterTable() {
 
 @app.route("/")
 def home():
+    # --- CRON JOB / BOT KONTROLÜ ---
+    user_agent = request.headers.get('User-Agent', '').lower()
+    if "cron-job.org" in user_agent or "uptime" in user_agent:
+        return "ok", 200 
+    # ------------------------------
+
     current_sid = request.args.get('sid', 'z5gxl9')
     current_server = next((s for s in SERVERS if s['id'] == current_sid), SERVERS[0])
-    
     try:
         url = f"https://servers-frontend.fivem.net/api/servers/single/{current_sid}"
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(url, headers=headers, timeout=15)
         players_list = []
-        
         if response.status_code == 200:
             data = response.json().get("Data", {})
             players_raw = data.get("players") or []
             players_raw = sorted(players_raw, key=lambda x: x.get("id", 0))
-            
             for p in players_raw:
                 steam, discord = "Yok", "Bağlı Değil"
                 for identifier in p.get("identifiers", []):
                     if "steam:" in identifier: steam = identifier.split(":")[1]
                     elif "discord:" in identifier: discord = identifier.split(":")[1]
                 players_list.append({"id": p.get("id"), "name": p.get("name"), "steam": steam, "discord": discord})
-        
-        return render_template_string(HTML_TEMPLATE, 
-                                     players=players_list, 
-                                     count=len(players_list), 
-                                     waze_id=WAZE_ID, 
-                                     lilknife_id=LILKNIFE_ID,
-                                     servers_list=SERVERS,
-                                     current_server=current_server)
+        return render_template_string(HTML_TEMPLATE, players=players_list, count=len(players_list), waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
     except Exception as e:
-        return render_template_string(HTML_TEMPLATE, 
-                                     players=[], 
-                                     count=0, 
-                                     waze_id=WAZE_ID, 
-                                     lilknife_id=LILKNIFE_ID,
-                                     servers_list=SERVERS,
-                                     current_server=current_server)
+        return render_template_string(HTML_TEMPLATE, players=[], count=0, waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
+
+@app.route("/ping")
+def ping():
+    return "ok", 200
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
