@@ -19,17 +19,18 @@ HTML_TEMPLATE = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MDPVP | Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Inter:wght@400;700;900&family=Orbitron:wght@800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary: #ff1d1d;
             --cyan: #00f2fe;
             --bg: #050507;
             --card: rgba(18, 18, 22, 0.95);
+            --discord-blue: #5865F2;
         }
 
         body { margin: 0; background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
         
-        /* Arka Plan Izgarası */
         body::before {
             content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-image: radial-gradient(circle at 50% 50%, rgba(255, 29, 29, 0.05) 0%, transparent 50%),
@@ -38,11 +39,49 @@ HTML_TEMPLATE = """
             background-size: 100% 100%, 50px 50px, 50px 50px; z-index: -1;
         }
 
-        .navbar { padding: 15px 5%; background: rgba(0, 0, 0, 0.9); border-bottom: 2px solid var(--primary); display: flex; justify-content: space-between; align-items: center; }
-        .logo-text { font-family: 'Audiowide'; font-size: 28px; letter-spacing: 2px; }
+        .navbar { 
+            padding: 10px 5%; 
+            background: rgba(0, 0, 0, 0.9); 
+            border-bottom: 2px solid var(--primary); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        
+        .logo-box { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; /* Boşluk bir tık artırıldı */
+        }
+        
+        .nav-logo {
+            height: 65px; /* Logo boyutu büyütüldü */
+            width: auto;
+            filter: drop-shadow(0 0 10px rgba(255, 29, 29, 0.6));
+            transition: transform 0.3s ease;
+        }
+
+        .logo-box:hover .nav-logo {
+            transform: scale(1.05);
+        }
+
+        .logo-text { font-family: 'Audiowide'; font-size: 30px; letter-spacing: 2px; color: #fff; }
+
+        .discord-link {
+            font-family: 'Orbitron';
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 800;
+            transition: 0.3s ease;
+            letter-spacing: 1px;
+        }
+        .discord-link:hover {
+            color: var(--discord-blue);
+            text-shadow: 0 0 10px rgba(88, 101, 242, 0.5);
+        }
 
         .container { width: 90%; max-width: 1200px; margin: 50px auto; }
-
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-bottom: 40px; }
 
         .card {
@@ -51,13 +90,11 @@ HTML_TEMPLATE = """
             transition: 0.3s ease; cursor: pointer; position: relative;
         }
 
-        /* Mouse üzerine gelince KIRMIZI parlama efekti */
         .card:hover { 
             border-color: var(--primary); 
             transform: translateY(-5px); 
             box-shadow: 0 0 30px rgba(255, 29, 29, 0.2); 
         }
-        .card:active { transform: scale(0.95); }
 
         .admin-name { 
             font-family: 'Orbitron'; font-size: 35px; font-weight: 900; 
@@ -70,41 +107,62 @@ HTML_TEMPLATE = """
             width: 120px; height: 120px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.1);
             transition: 0.3s; margin-bottom: 15px;
         }
-        .card:hover .admin-img { border-color: var(--primary); filter: drop-shadow(0 0 10px var(--primary)); }
 
         .player-val { font-family: 'Orbitron'; font-size: 60px; color: var(--cyan); text-shadow: 0 0 20px rgba(0,242,254,0.4); }
         .label-small { color: #555; font-size: 11px; letter-spacing: 3px; font-weight: 800; margin-bottom: 10px; display: block; }
 
-        /* Kopyalandı Bildirimi */
+        .search-area { position: relative; display: flex; align-items: center; gap: 10px; margin-bottom: 25px; }
+
+        .search-input {
+            flex-grow: 1; padding: 18px; background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+            color: #fff; outline: none; transition: 0.3s;
+        }
+        .search-input:focus { border-color: var(--primary); background: rgba(255,255,255,0.08); }
+
+        .refresh-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 15px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .refresh-btn:hover { background: var(--primary); border-color: var(--primary); transform: rotate(15deg); }
+        .refresh-btn:active { transform: scale(0.9); }
+        
+        .spin { animation: fa-spin 0.8s ease-in-out; }
+
+        .table-wrap { background: var(--card); border-radius: 15px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: rgba(0,0,0,0.3); padding: 20px; text-align: left; color: var(--primary); font-family: 'Orbitron'; font-size: 11px; }
+        td { padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.02); }
+
         #toast {
             visibility: hidden; min-width: 250px; background-color: var(--primary);
             color: #fff; text-align: center; border-radius: 8px; padding: 16px;
             position: fixed; z-index: 100; left: 50%; bottom: 30px;
             transform: translateX(-50%); font-weight: bold;
-            box-shadow: 0 0 20px rgba(255, 29, 29, 0.5);
         }
         #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
 
         @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
         @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-
-        /* Arama Kutusu ve Tablo */
-        .search-input {
-            width: 100%; padding: 18px; background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
-            color: #fff; margin-bottom: 25px; outline: none;
-        }
-        .table-wrap { background: var(--card); border-radius: 15px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: rgba(0,0,0,0.3); padding: 20px; text-align: left; color: var(--primary); font-family: 'Orbitron'; font-size: 11px; }
-        td { padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.02); }
     </style>
 </head>
 <body>
 
 <nav class="navbar">
     <div class="logo-box">
-        <span class="logo-text">MDPVP <span style="color:var(--primary)">DASHBOARD</span></span>
+        <img src="{{ url_for('static', filename='mdpvp.gif') }}" alt="Logo" class="nav-logo" onerror="this.style.display='none'">
+        <span class="logo-text">MDPVP</span>
+    </div>
+    <div class="social-box">
+        <a href="https://discord.gg/a51" target="_blank" class="discord-link">discord.gg/a51</a>
     </div>
 </nav>
 
@@ -120,7 +178,6 @@ HTML_TEMPLATE = """
         <div class="card" style="cursor: default; border-bottom: 3px solid var(--cyan);">
             <span class="label-small" style="color: var(--cyan)">AKTİF OYUNCU</span>
             <div class="player-val">{{ count }}</div>
-            <span style="font-size: 10px; color: #444;">ŞEHİRDEKİ TOPLAM</span>
         </div>
 
         <div class="card" onclick="copyAndOpen('{{ lilknife_id }}', 'Lilknife')">
@@ -131,7 +188,12 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <input type="text" id="search" class="search-input" placeholder="Oyuncu ara..." onkeyup="filterTable()">
+    <div class="search-area">
+        <input type="text" id="search" class="search-input" placeholder="Oyuncu ara..." onkeyup="filterTable()">
+        <button class="refresh-btn" onclick="refreshPage(this)" title="Listeyi Yenile">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+    </div>
 
     <div class="table-wrap">
         <table id="playerTable">
@@ -162,8 +224,15 @@ HTML_TEMPLATE = """
 <div id="toast">ID Kopyalandı!</div>
 
 <script>
+function refreshPage(btn) {
+    const icon = btn.querySelector('i');
+    icon.classList.add('spin');
+    setTimeout(() => {
+        window.location.reload();
+    }, 300);
+}
+
 function copyAndOpen(id, name) {
-    // 1. Kopyalama İşlemi
     const el = document.createElement('textarea');
     el.value = id;
     document.body.appendChild(el);
@@ -171,13 +240,11 @@ function copyAndOpen(id, name) {
     document.execCommand('copy');
     document.body.removeChild(el);
 
-    // 2. Bildirim Göster
     const toast = document.getElementById("toast");
     toast.innerText = name + " ID Kopyalandı! Discord Açılıyor...";
     toast.className = "show";
     setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
 
-    // 3. Discord Uygulamasını Tetikle
     window.location.href = "discord://"; 
 }
 
