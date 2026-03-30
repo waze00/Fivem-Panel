@@ -6,53 +6,16 @@ app = Flask(__name__)
 
 # --- SUNUCU TANIMLAMALARI ---
 SERVERS = [
-    {
-        "id": "z5gxl9", 
-        "name": "MDPVP", 
-        "short_name": "MDPVP", 
-        "logo": "mdpvp.gif",
-        "primary_color": "#ff1d1d", 
-        "accent_color": "#ffffff"
-    },
-    {
-        "id": "z5rgx4", 
-        "name": "WELLGUN 8.SEZON", 
-        "short_name": "WELLGUN", 
-        "logo": "wellgun.gif",
-        "primary_color": "#ffffff", 
-        "accent_color": "#ffffff"
-    },
-    {
-        "id": "zrqlap", 
-        "name": "LETRA X", 
-        "short_name": "LETRA", 
-        "logo": "letra.gif",
-        "primary_color": "#1b5e8b", 
-        "accent_color": "#ecf0f1"
-    },
-    {
-        "id": "epx97a", 
-        "name": "DADDY 1.0", 
-        "short_name": "DADDY", 
-        "logo": "daddy.png",
-        "primary_color": "#cc2e2e", 
-        "accent_color": "#ffffff"
-    },
-    {
-        "id": "zem7ky", 
-        "name": "GUID PVP 3.0", 
-        "short_name": "GUID", 
-        "logo": "guid.gif",
-        "primary_color": "#beaf1f", 
-        "accent_color": "#ffffff"
-    },
+    {"id": "z5gxl9", "name": "MDPVP", "short_name": "MDPVP", "logo": "mdpvp.gif", "primary_color": "#ff1d1d", "accent_color": "#ffffff"},
+    {"id": "z5rgx4", "name": "WELLGUN 8.SEZON", "short_name": "WELLGUN", "logo": "wellgun.gif", "primary_color": "#ffffff", "accent_color": "#ffffff"},
+    {"id": "zrqlap", "name": "LETRA X", "short_name": "LETRA", "logo": "letra.gif", "primary_color": "#1b5e8b", "accent_color": "#ecf0f1"},
+    {"id": "epx97a", "name": "DADDY 1.0", "short_name": "DADDY", "logo": "daddy.png", "primary_color": "#cc2e2e", "accent_color": "#ffffff"},
+    {"id": "zem7ky", "name": "GUID PVP 3.0", "short_name": "GUID", "logo": "guid.gif", "primary_color": "#beaf1f", "accent_color": "#ffffff"},
 ]
 
-# --- YÖNETİCİ BİLGİLERİ ---
 WAZE_ID = "827593836229296188"
 LILKNIFE_ID = "821434006843031624"
 
-# --- HTML/CSS ŞABLONU ---
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="tr">
@@ -65,174 +28,118 @@ HTML_TEMPLATE = """
     <style>
         :root {
             --primary: {{ current_server.primary_color }};
-            /* Izgara ve efektler için şeffaf renkler */
-            --primary-rgb: {{ current_server.primary_color | replace('#', '') }}; /* Python tarafında hex-to-rgb dönüşümü yapılabilir ama şimdilik manuel % şeffaflık kullanacağız */
-            --primary-grid: {{ current_server.primary_color }}26; /* %15 Opasite */
-            --primary-glow: {{ current_server.primary_color }}0D; /* %5 Opasite */
-            
+            --primary-grid: {{ current_server.primary_color }}26;
+            --primary-glow: {{ current_server.primary_color }}1A;
             --accent: {{ current_server.accent_color }};
             --bg: #030305;
             --card: rgba(10, 10, 14, 0.96);
             --discord-blue: #5865F2;
-            --sidebar-bg: rgba(5, 5, 8, 0.99);
         }
         
-        body { margin: 0; background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; position: relative; min-height: 100vh; }
+        body { margin: 0; background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; min-height: 100vh; }
         
-        /* --- YENİ GELİŞMİŞ ARKA PLAN --- */
-        
-        /* 1. Katman: Dinamik Renk Bulutu ve Tarama Çizgileri */
         body::before {
-            content: ""; 
-            position: fixed; 
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-image: 
-                /* Merkezden yayılan sunucu renginde hafif parlama */
-                radial-gradient(circle at 50% 50%, var(--primary-glow) 0%, transparent 70%),
-                /* Çok hafif yatay tarama çizgileri */
+            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(circle at 50% 50%, var(--primary-glow) 0%, transparent 70%),
                 repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px);
             z-index: -2;
         }
-
-        /* 2. Katman: Hareketli Cyberpunk Izgarası (Perspective Grid) */
-        .bg-grid-container {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            perspective: 350px; /* 3D derinlik hissi */
-            z-index: -1;
-            overflow: hidden;
-            opacity: 0.8;
-        }
-
-        .bg-grid {
-            position: absolute;
-            width: 200%; height: 200%; /* Ekranı kaplaması için büyük */
-            top: -50%; left: -50%;
-            background-image: 
-                linear-gradient(var(--primary-grid) 1px, transparent 1px),
-                linear-gradient(90deg, var(--primary-grid) 1px, transparent 1px);
-            background-size: 60px 60px;
-            transform: rotateX(45deg); /* Yatay yatırma */
-            animation: grid-flow 20s linear infinite; /* Hareket animasyonu */
-            -webkit-mask-image: radial-gradient(circle, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 70%);
-            mask-image: radial-gradient(circle, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 70%);
-        }
-
-        /* Izgara hareket animasyonu (yukarı doğru akış) */
-        @keyframes grid-flow {
-            from { transform: rotateX(45deg) translateY(0); }
-            to { transform: rotateX(45deg) translateY(60px); } /* 1 birim kare kadar hareket ettir */
-        }
-        
-        /* --- ARKA PLAN BİTİŞ --- */
-
-        .sidebar {
-            position: fixed; top: 0; left: -300px; width: 280px; height: 100%;
-            background: var(--sidebar-bg); border-right: 1px solid var(--primary);
-            z-index: 2000; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            padding: 30px 20px; box-shadow: 20px 0 50px rgba(0,0,0,0.8);
-            backdrop-filter: blur(5px);
-        }
-        .sidebar.active { left: 0; }
-        .sidebar-header { font-family: 'Orbitron'; color: var(--primary); font-size: 18px; margin-bottom: 30px; border-bottom: 1px solid var(--primary-grid); padding-bottom: 10px; }
-        .server-item { 
-            display: block; padding: 15px; margin-bottom: 10px; background: rgba(255,255,255,0.02);
-            border-radius: 8px; text-decoration: none; color: #fff; font-family: 'Inter';
-            transition: 0.3s;
-        }
-        .server-item:hover { background: var(--primary-grid); transform: translateX(5px); }
-        .server-item.active { border: 1px solid var(--primary); background: var(--primary-glow); }
-        
-        .overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7); display: none; z-index: 1999; backdrop-filter: blur(3px);
-        }
-        .overlay.active { display: block; }
+        .bg-grid-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; perspective: 350px; z-index: -1; overflow: hidden; opacity: 0.8; }
+        .bg-grid { position: absolute; width: 200%; height: 200%; top: -50%; left: -50%; background-image: linear-gradient(var(--primary-grid) 1px, transparent 1px), linear-gradient(90deg, var(--primary-grid) 1px, transparent 1px); background-size: 60px 60px; transform: rotateX(45deg); animation: grid-flow 20s linear infinite; -webkit-mask-image: radial-gradient(circle, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 70%); }
+        @keyframes grid-flow { from { transform: rotateX(45deg) translateY(0); } to { transform: rotateX(45deg) translateY(60px); } }
         
         .navbar { 
-            padding: 10px 5%; background: rgba(0, 0, 0, 0.95); 
+            padding: 0 3%; background: rgba(0, 0, 0, 0.98); 
             border-bottom: 2px solid var(--primary); display: flex; 
             justify-content: space-between; align-items: center; 
-            position: sticky; top: 0; z-index: 1000;
-            backdrop-filter: blur(5px);
+            position: sticky; top: 0; z-index: 1000; height: 80px;
+            backdrop-filter: blur(10px);
         }
-        .menu-btn { color: #fff; font-size: 24px; cursor: pointer; transition: 0.3s; padding: 5px 15px; border-radius: 5px; margin-right: 10px; }
-        .menu-btn:hover { color: var(--primary); background: rgba(255,255,255,0.05); }
-        .logo-box { display: flex; align-items: center; }
-        .nav-logo { height: 60px; filter: drop-shadow(0 0 15px var(--primary)); transition: 0.5s ease; }
-        .logo-text { font-family: 'Audiowide'; font-size: 26px; color: #fff; margin-left: 10px; }
-        .current-tag { font-family: 'Orbitron'; font-size: 10px; color: var(--accent); margin-left: 10px; border: 1px solid var(--primary-grid); padding: 2px 6px; border-radius: 4px; }
-        .discord-link { font-family: 'Orbitron'; color: #fff; text-decoration: none; font-size: 14px; font-weight: 800; transition: 0.3s; }
-        .discord-link:hover { color: var(--discord-blue); text-shadow: 0 0 10px var(--discord-blue); }
+
+        .logo-box { display: flex; align-items: center; min-width: 240px; }
+        .nav-logo { height: 50px; filter: drop-shadow(0 0 12px var(--primary)); }
+        .logo-text { font-family: 'Audiowide'; font-size: 24px; color: #fff; margin-left: 12px; }
         
-        .container { width: 90%; max-width: 1200px; margin: 40px auto; position: relative; z-index: 1; }
+        .current-tag { 
+            font-family: 'Orbitron'; font-size: 10px; color: var(--accent); 
+            margin-left: 10px; border: 1px solid var(--primary-grid); 
+            padding: 2px 6px; border-radius: 4px; opacity: 0.8;
+            background: rgba(255,255,255,0.02);
+        }
+
+        .nav-server-switcher { flex-grow: 1; display: flex; justify-content: center; gap: 12px; overflow-x: auto; scrollbar-width: none; padding: 0 20px; }
+        .nav-server-switcher::-webkit-scrollbar { display: none; }
+
+        .nav-srv-tab {
+            padding: 8px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 25px; color: #888; text-decoration: none; font-family: 'Orbitron'; font-size: 11px;
+            font-weight: 800; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; gap: 8px;
+        }
+        .nav-srv-tab-icon { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; }
         
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; padding: 10px; }
+        .nav-srv-tab:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: var(--primary); transform: translateY(-2px); }
+        .nav-srv-tab.active { 
+            background: var(--primary); color: #000; 
+            border-color: var(--primary); box-shadow: 0 0 15px var(--primary-grid); 
+        }
+
+        .social-box { min-width: 180px; text-align: right; }
+        .discord-link { 
+            font-family: 'Orbitron'; color: #fff; text-decoration: none; 
+            font-size: 13px; font-weight: 900; transition: 0.3s; 
+            display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+        }
+        .discord-link:hover { color: var(--discord-blue); text-shadow: 0 0 15px var(--discord-blue); transform: scale(1.05); }
+        
+        .container { width: 92%; max-width: 1300px; margin: 40px auto; position: relative; z-index: 1; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; margin-bottom: 40px; }
         .card { 
-            background: var(--card); 
-            border: 1px solid rgba(255,255,255,0.03); 
-            border-radius: 15px; 
-            padding: 30px 20px; 
-            text-align: center; 
-            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-            cursor: pointer; 
-            position: relative; 
-            overflow: hidden;
+            background: var(--card); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; 
+            padding: 30px; text-align: center; transition: 0.4s; cursor: pointer; position: relative; overflow: hidden;
         }
-        .card:hover { 
-            border-color: var(--primary); 
-            transform: translateY(-5px); 
-            box-shadow: 0 10px 40px -10px var(--primary-grid);
-        }
-        
-        /* Kartın arkasına hafif bir parlama efekti */
         .card::after {
             content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, var(--primary-glow) 0%, transparent 70%);
-            opacity: 0; transition: 0.3s; z-index: -1;
+            background: radial-gradient(circle at center, var(--primary-glow) 0%, transparent 80%);
+            opacity: 0; transition: 0.4s;
         }
+        .card:hover { border-color: var(--primary); transform: translateY(-8px); box-shadow: 0 15px 45px -10px var(--primary-grid); }
         .card:hover::after { opacity: 1; }
+
+        .admin-name { font-family: 'Orbitron'; font-size: 32px; font-weight: 900; color: #fff; margin-bottom: 10px; display: block; position: relative; z-index: 2; }
+        .admin-img { width: 100px; height: 100px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.05); margin-bottom: 15px; position: relative; z-index: 2; }
+        .player-val { font-family: 'Orbitron'; font-size: 60px; color: var(--accent); text-shadow: 0 0 30px var(--primary); font-weight: 900; position: relative; z-index: 2; }
+        .label-small { color: #777; font-size: 11px; letter-spacing: 3px; font-weight: 800; margin-bottom: 8px; display: block; position: relative; z-index: 2; }
         
-        .admin-name { font-family: 'Orbitron'; font-size: 30px; font-weight: 900; color: #fff; margin-bottom: 10px; display: block; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
-        .admin-img { width: 100px; height: 100px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.05); margin-bottom: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
-        .player-val { font-family: 'Orbitron'; font-size: 55px; color: var(--accent); text-shadow: 0 0 25px var(--primary); font-weight: 900; }
-        .label-small { color: #666; font-size: 10px; letter-spacing: 2px; font-weight: 800; margin-bottom: 5px; display: block; }
+        .card-server-name { font-family: 'Orbitron'; font-size: 10px; color: #555; display: block; margin-top: 12px; letter-spacing: 2px; text-transform: uppercase; position: relative; z-index: 2; }
+
+        .search-area { display: flex; gap: 12px; margin-bottom: 25px; }
+        .search-input { flex-grow: 1; padding: 16px 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; color: #fff; outline: none; transition: 0.3s; }
+        .search-input:focus { border-color: var(--primary); box-shadow: 0 0 15px var(--primary-grid); }
         
-        .search-area { display: flex; gap: 10px; margin-bottom: 20px; }
-        .search-input { flex-grow: 1; padding: 15px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; color: #fff; outline: none; transition: 0.3s; font-family: 'Inter'; }
-        .search-input:focus { border-color: var(--primary); background: rgba(255,255,255,0.05); box-shadow: 0 0 15px var(--primary-glow); }
-        .refresh-btn { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); color: #fff; padding: 15px; border-radius: 10px; cursor: pointer; transition: 0.3s; }
-        .refresh-btn:hover { background: var(--primary); border-color: var(--primary); box-shadow: 0 0 15px var(--primary); }
+        .refresh-btn { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: #fff; padding: 16px 20px; border-radius: 12px; cursor: pointer; transition: 0.3s; }
+        .refresh-btn:hover { background: var(--primary); box-shadow: 0 0 15px var(--primary); transform: rotate(15deg); }
         
-        .table-wrap { background: var(--card); border-radius: 15px; overflow: hidden; border: 1px solid rgba(255,255,255,0.03); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .table-wrap { background: var(--card); border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
         table { width: 100%; border-collapse: collapse; }
-        th { background: rgba(0,0,0,0.4); padding: 18px 15px; text-align: left; color: var(--primary); font-family: 'Orbitron'; font-size: 11px; letter-spacing: 1px; border-bottom: 1px solid var(--primary-grid); }
-        td { padding: 14px 15px; border-bottom: 1px solid rgba(255,255,255,0.01); font-size: 14px; transition: 0.2s; }
-        tr:hover td { background: rgba(255,255,255,0.01); color: var(--accent); }
+        th { background: rgba(255,255,255,0.02); padding: 20px; text-align: left; color: var(--primary); font-family: 'Orbitron'; font-size: 11px; border-bottom: 2px solid var(--primary-grid); }
+        td { padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 14px; transition: 0.2s; }
+        tr:hover td { background: rgba(255,255,255,0.03); color: var(--accent); }
         
         #toast { 
-            visibility: hidden; 
-            min-width: 250px; 
+            visibility: hidden; min-width: 250px; 
             background-color: var(--primary); 
-            color: {{ '#000' if current_server.id == 'z5rgx4' else '#fff' }}; 
-            text-align: center; 
-            border-radius: 10px; 
-            padding: 16px; 
-            position: fixed; 
-            z-index: 3000; 
-            left: 50%; 
-            bottom: 30px; 
-            transform: translateX(-50%); 
-            font-weight: bold; 
-            font-family: 'Orbitron';
-            box-shadow: 0 5px 25px rgba(0,0,0,0.5);
-            font-size: 14px;
+            color: #000; 
+            text-align: center; border-radius: 10px; padding: 16px; 
+            position: fixed; z-index: 3000; left: 50%; bottom: 30px; 
+            transform: translateX(-50%); font-family: 'Orbitron'; font-weight: bold; 
         }
+        
         #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
         @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
         @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-        @keyframes fa-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .spin { animation: fa-spin 0.8s ease-in-out; }
+        @keyframes fa-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -241,52 +148,52 @@ HTML_TEMPLATE = """
     <div class="bg-grid"></div>
 </div>
 
-<div class="overlay" id="overlay"></div>
-<div class="sidebar" id="sidebar">
-    <div class="sidebar-header">SUNUCU SEÇİMİ</div>
-    {% for srv in servers_list %}
-    <a href="/?sid={{ srv.id }}" class="server-item {% if srv.id == current_server.id %}active{% endif %}">
-        <i class="fas fa-server" style="margin-right: 10px;"></i>
-        {{ srv.name }}
-    </a>
-    {% endfor %}
-</div>
 <nav class="navbar">
     <div class="logo-box">
-        <div class="menu-btn" onclick="toggleMenu()">
-            <i class="fas fa-bars"></i>
-        </div>
         <img src="{{ url_for('static', filename=current_server.logo) }}" alt="Logo" class="nav-logo" onerror="this.style.display='none'">
         <span class="logo-text">{{ current_server.short_name }}</span>
-        <span class="current-tag">{{ current_server.name }}</span>
+        <span class="current-tag">{{ current_server.short_name }}</span>
     </div>
+
+    <div class="nav-server-switcher">
+        {% for srv in servers_list %}
+        <a href="/?sid={{ srv.id }}" class="nav-srv-tab {% if srv.id == current_server.id %}active{% endif %}">
+            <img src="{{ url_for('static', filename=srv.logo) }}" class="nav-srv-tab-icon" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png';">
+            {{ srv.name }}
+        </a>
+        {% endfor %}
+    </div>
+
     <div class="social-box">
-        <a href="https://discord.gg/a51" target="_blank" class="discord-link">discord.gg/a51</a>
+        <a href="https://discord.gg/a51" target="_blank" class="discord-link">
+            <i class="fab fa-discord"></i> discord.gg/a51
+        </a>
     </div>
 </nav>
+
 <div class="container">
     <div class="stats-grid">
         <div class="card" onclick="copyAndOpen('{{ waze_id }}', 'Waze')">
             <span class="label-small">SUNUCU SAHİBİ</span>
             <img src="{{ url_for('static', filename='waze.png') }}" class="admin-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
             <span class="admin-name">Waze</span>
-            <span style="font-size: 9px; color: #555;">ID KOPYALAMAK İÇİN TIKLA</span>
+            <span style="font-size: 8px; color: #555;">ID KOPYALAMAK İÇİN TIKLA</span>
         </div>
 
         <div class="card">
             <span class="label-small">İSTATİSTİK</span>
-            <div style="height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+            <div style="height: 100px; display: flex; align-items: center; justify-content: center;">
                  <div class="player-val">{{ count }}</div>
             </div>
-            <span class="admin-name" style="font-size: 24px;">AKTİF OYUNCU</span>
-            <span style="font-size: 9px; color: #555;">{{ current_server.name }}</span>
+            <span class="admin-name" style="font-size: 26px;">AKTİF OYUNCU</span>
+            <span class="card-server-name">{{ current_server.short_name }}</span>
         </div>
 
         <div class="card" onclick="copyAndOpen('{{ lilknife_id }}', 'Lilknife')">
             <span class="label-small">SUNUCU SAHİBİ</span>
             <img src="{{ url_for('static', filename='lilknife.png') }}" class="admin-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
             <span class="admin-name">Lilknife</span>
-            <span style="font-size: 9px; color: #555;">ID KOPYALAMAK İÇİN TIKLA</span>
+            <span style="font-size: 8px; color: #555;">ID KOPYALAMAK İÇİN TIKLA</span>
         </div>
     </div>
     
@@ -296,6 +203,7 @@ HTML_TEMPLATE = """
             <i class="fas fa-sync-alt"></i>
         </button>
     </div>
+
     <div class="table-wrap">
         <table id="playerTable">
             <thead>
@@ -310,7 +218,7 @@ HTML_TEMPLATE = """
             <tbody>
                 {% for player in players %}
                 <tr>
-                    <td><span style="height:8px; width:8px; background:#00ff88; border-radius:50%; display:inline-block; box-shadow:0 0 8px #00ff88;"></span></td>
+                    <td><span style="height:10px; width:10px; background:#00ff88; border-radius:50%; display:inline-block; box-shadow:0 0 10px #00ff88;"></span></td>
                     <td>#{{ player.id }}</td>
                     <td><strong>{{ player.name }}</strong></td>
                     <td style="color: #5cc2ff; font-family: monospace;">{{ player.steam }}</td>
@@ -321,13 +229,10 @@ HTML_TEMPLATE = """
         </table>
     </div>
 </div>
+
 <div id="toast">ID Kopyalandı!</div>
+
 <script>
-function toggleMenu() {
-    document.getElementById('sidebar').classList.toggle('active');
-    document.getElementById('overlay').classList.toggle('active');
-}
-document.getElementById('overlay').onclick = toggleMenu;
 function refreshPage(btn) {
     btn.querySelector('i').classList.add('spin');
     setTimeout(() => { window.location.reload(); }, 300);
@@ -342,7 +247,7 @@ function copyAndOpen(id, name) {
     const toast = document.getElementById("toast");
     toast.innerText = name + " ID Kopyalandı!";
     toast.className = "show";
-    setTimeout(function(){ toast.className = "hide"; }, 3000);
+    setTimeout(function(){ toast.className = ""; }, 3000);
     window.location.href = "discord://"; 
 }
 function filterTable() {
@@ -360,10 +265,6 @@ function filterTable() {
 
 @app.route("/")
 def home():
-    user_agent = request.headers.get('User-Agent', '').lower()
-    if "cron-job.org" in user_agent or "uptime" in user_agent:
-        return "ok", 200 
-
     current_sid = request.args.get('sid', 'z5gxl9')
     current_server = next((s for s in SERVERS if s['id'] == current_sid), SERVERS[0])
     try:
@@ -373,8 +274,7 @@ def home():
         players_list = []
         if response.status_code == 200:
             data = response.json().get("Data", {})
-            players_raw = data.get("players") or []
-            players_raw = sorted(players_raw, key=lambda x: x.get("id", 0))
+            players_raw = sorted(data.get("players") or [], key=lambda x: x.get("id", 0))
             for p in players_raw:
                 steam, discord = "Yok", "Bağlı Değil"
                 for identifier in p.get("identifiers", []):
@@ -382,12 +282,8 @@ def home():
                     elif "discord:" in identifier: discord = identifier.split(":")[1]
                 players_list.append({"id": p.get("id"), "name": p.get("name"), "steam": steam, "discord": discord})
         return render_template_string(HTML_TEMPLATE, players=players_list, count=len(players_list), waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
-    except Exception as e:
+    except:
         return render_template_string(HTML_TEMPLATE, players=[], count=0, waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
-
-@app.route("/ping")
-def ping():
-    return "ok", 200
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
