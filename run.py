@@ -275,7 +275,7 @@ function filterTable() {
 # --- CRON JOB İÇİN ÖZEL PİNG YOLU ---
 @app.route("/ping")
 def ping():
-    return "OK", 200
+    return "1", 200
 
 @app.route("/")
 def home():
