@@ -56,7 +56,10 @@ HTML_TEMPLATE = """
             backdrop-filter: blur(10px);
         }
 
-        .logo-box { display: flex; align-items: center; min-width: 240px; }
+        /* --- LOGO VE SOCIAL KUTULARI EŞİT GENİŞLİKTE OLURSA ORTA KISIM TAM MERKEZLENİR --- */
+        .logo-box { display: flex; align-items: center; width: 300px; flex-shrink: 0; }
+        .social-box { width: 300px; text-align: right; flex-shrink: 0; }
+
         .nav-logo { height: 50px; filter: drop-shadow(0 0 12px var(--primary)); }
         .logo-text { font-family: 'Audiowide'; font-size: 24px; color: #fff; margin-left: 12px; }
         
@@ -67,13 +70,23 @@ HTML_TEMPLATE = """
             background: rgba(255,255,255,0.02);
         }
 
-        .nav-server-switcher { flex-grow: 1; display: flex; justify-content: center; gap: 12px; overflow-x: auto; scrollbar-width: none; padding: 0 20px; }
+        /* --- BURASI ORTALAMA İŞLEMİNİ YAPAR --- */
+        .nav-server-switcher { 
+            flex-grow: 1; 
+            display: flex; 
+            justify-content: center; 
+            gap: 12px; 
+            overflow-x: auto; 
+            scrollbar-width: none; 
+            padding: 0 10px; 
+        }
         .nav-server-switcher::-webkit-scrollbar { display: none; }
 
         .nav-srv-tab {
             padding: 8px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
             border-radius: 25px; color: #888; text-decoration: none; font-family: 'Orbitron'; font-size: 11px;
             font-weight: 800; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; gap: 8px;
+            white-space: nowrap;
         }
         .nav-srv-tab-icon { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; }
         
@@ -83,7 +96,6 @@ HTML_TEMPLATE = """
             border-color: var(--primary); box-shadow: 0 0 15px var(--primary-grid); 
         }
 
-        .social-box { min-width: 180px; text-align: right; }
         .discord-link { 
             font-family: 'Orbitron'; color: #fff; text-decoration: none; 
             font-size: 13px; font-weight: 900; transition: 0.3s; 
