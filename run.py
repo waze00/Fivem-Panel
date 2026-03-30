@@ -16,7 +16,7 @@ SERVERS = [
 WAZE_ID = "827593836229296188"
 LILKNIFE_ID = "821434006843031624"
 
-# --- SENİN TASARIMIN (BİREBİR) ---
+# --- SENİN TASARIMIN (TAMAMI) ---
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="tr">
@@ -272,6 +272,11 @@ function filterTable() {
 </html>
 """
 
+# --- CRON JOB İÇİN ÖZEL PİNG YOLU ---
+@app.route("/ping")
+def ping():
+    return "OK", 200
+
 @app.route("/")
 def home():
     current_sid = request.args.get('sid', 'z5gxl9')
@@ -283,7 +288,6 @@ def home():
     try:
         url = f"https://servers-frontend.fivem.net/api/servers/single/{current_sid}"
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0'}
-        # Timeout'u 8 saniyeye çektik, FiveM API gecikince siteyi dondurmasın.
         response = requests.get(url, headers=headers, timeout=8) 
         
         if response.status_code == 200:
@@ -303,13 +307,9 @@ def home():
                 count = data.get("clients")
                 
     except Exception:
-        # Hata anında bile çökmek yerine boş tablo gösteriyoruz.
         pass
 
     return render_template_string(HTML_TEMPLATE, players=players_list, count=count, waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
 
 if __name__ == "__main__":
-    # --- CRON JOB İÇİN KRİTİK DÜZENLEMELER ---
-    # use_reloader=False: Flask'ın portu kilitlemesini ve Cron Job hatası vermesini önler.
-    # debug=False: Canlı sunucu için en güvenli ve stabil moddur.
     app.run(debug=False, host='0.0.0.0', port=5000, use_reloader=False)
