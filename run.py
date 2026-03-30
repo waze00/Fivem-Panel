@@ -174,7 +174,6 @@ HTML_TEMPLATE = """
 <div class="container">
     <div class="stats-grid">
         <div class="card" onclick="copyAndOpen('{{ waze_id }}', 'Waze')">
-            <span class="label-small">SUNUCU SAHİBİ</span>
             <img src="{{ url_for('static', filename='waze.png') }}" class="admin-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
             <span class="admin-name">Waze</span>
             <span style="font-size: 8px; color: #555;">ID KOPYALAMAK İÇİN TIKLA</span>
@@ -190,7 +189,6 @@ HTML_TEMPLATE = """
         </div>
 
         <div class="card" onclick="copyAndOpen('{{ lilknife_id }}', 'Lilknife')">
-            <span class="label-small">SUNUCU SAHİBİ</span>
             <img src="{{ url_for('static', filename='lilknife.png') }}" class="admin-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
             <span class="admin-name">Lilknife</span>
             <span style="font-size: 8px; color: #555;">ID KOPYALAMAK İÇİN TIKLA</span>
