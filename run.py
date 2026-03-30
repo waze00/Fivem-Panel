@@ -11,40 +11,40 @@ SERVERS = [
         "name": "MDPVP", 
         "short_name": "MDPVP", 
         "logo": "mdpvp.gif",
-        "primary_color": "#ff1d1d", # MDPVP Kırmızısı
-        "accent_color": "#ffffff"    # MDPVP Turkuazı
+        "primary_color": "#ff1d1d", 
+        "accent_color": "#ffffff"
     },
     {
         "id": "z5rgx4", 
         "name": "WELLGUN 8.SEZON", 
         "short_name": "WELLGUN", 
         "logo": "wellgun.gif",
-        "primary_color": "#ffffff", # Wellgun Turuncusu
-        "accent_color": "#ffffff"    # Wellgun Altın Rengi
+        "primary_color": "#ffffff", 
+        "accent_color": "#ffffff"
     },
     {
         "id": "zrqlap", 
         "name": "LETRA X", 
         "short_name": "LETRA", 
         "logo": "letra.gif",
-        "primary_color": "#1b5e8b", # Letra Moru
-        "accent_color": "#ecf0f1"    # Letra Beyazı/Grisi
+        "primary_color": "#1b5e8b", 
+        "accent_color": "#ecf0f1"
     },
     {
         "id": "epx97a", 
         "name": "DADDY 1.0", 
         "short_name": "DADDY", 
         "logo": "daddy.png",
-        "primary_color": "#cc2e2e", # Daddy Yeşili
-        "accent_color": "#ffffff"    # Daddy Sarısı
+        "primary_color": "#cc2e2e", 
+        "accent_color": "#ffffff"
     },
     {
         "id": "zem7ky", 
         "name": "GUID PVP 3.0", 
         "short_name": "GUID", 
         "logo": "guid.gif",
-        "primary_color": "#beaf1f", # Guid Mavisi
-        "accent_color": "#ffffff"    # Guid Kırmızısı
+        "primary_color": "#beaf1f", 
+        "accent_color": "#ffffff"
     },
 ]
 
@@ -115,9 +115,27 @@ HTML_TEMPLATE = """
         .discord-link { font-family: 'Orbitron'; color: #fff; text-decoration: none; font-size: 14px; font-weight: 800; transition: 0.3s; }
         .discord-link:hover { color: var(--discord-blue); }
         .container { width: 90%; max-width: 1200px; margin: 40px auto; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .card { background: var(--card); border: 1px solid rgba(255,255,255,0.05); border-radius: 15px; padding: 30px 20px; text-align: center; transition: 0.3s ease; cursor: pointer; }
-        .card:hover { border-color: var(--primary); transform: translateY(-5px); }
+        
+        /* Kartların ve Gridin Düzenlendiği Kısım */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; padding: 10px; }
+        .card { 
+            background: var(--card); 
+            border: 1px solid rgba(255,255,255,0.05); 
+            border-radius: 15px; 
+            padding: 30px 20px; 
+            text-align: center; 
+            transition: 0.3s ease; 
+            cursor: pointer; 
+            position: relative; 
+            z-index: 1;
+        }
+        .card:hover { 
+            border-color: var(--primary); 
+            transform: translateY(-5px); 
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+        
         .admin-name { font-family: 'Orbitron'; font-size: 30px; font-weight: 900; color: #fff; margin-bottom: 10px; display: block; }
         .admin-img { width: 100px; height: 100px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); margin-bottom: 10px; }
         .player-val { font-family: 'Orbitron'; font-size: 50px; color: var(--accent); text-shadow: 0 0 20px var(--accent); }
@@ -171,10 +189,16 @@ HTML_TEMPLATE = """
             <span class="admin-name">Waze</span>
             <span style="font-size: 9px; color: #555;">ID KOPYALAMAK İÇİN TIKLA</span>
         </div>
-        <div class="card" style="cursor: default; border-bottom: 3px solid var(--accent);">
-            <span class="label-small" style="color: var(--accent)">AKTİF OYUNCU ({{ current_server.name }})</span>
-            <div class="player-val">{{ count }}</div>
+
+        <div class="card">
+            <span class="label-small">İSTATİSTİK</span>
+            <div style="height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+                 <div class="player-val">{{ count }}</div>
+            </div>
+            <span class="admin-name" style="font-size: 24px;">AKTİF OYUNCU</span>
+            <span style="font-size: 9px; color: #555;">{{ current_server.name }}</span>
         </div>
+
         <div class="card" onclick="copyAndOpen('{{ lilknife_id }}', 'Lilknife')">
             <span class="label-small">SUNUCU SAHİBİ</span>
             <img src="{{ url_for('static', filename='lilknife.png') }}" class="admin-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
@@ -182,6 +206,7 @@ HTML_TEMPLATE = """
             <span style="font-size: 9px; color: #555;">ID KOPYALAMAK İÇİN TIKLA</span>
         </div>
     </div>
+    
     <div class="search-area">
         <input type="text" id="search" class="search-input" placeholder="Oyuncu ara..." onkeyup="filterTable()">
         <button class="refresh-btn" onclick="refreshPage(this)">
@@ -252,11 +277,9 @@ function filterTable() {
 
 @app.route("/")
 def home():
-    # --- CRON JOB / BOT KONTROLÜ ---
     user_agent = request.headers.get('User-Agent', '').lower()
     if "cron-job.org" in user_agent or "uptime" in user_agent:
         return "ok", 200 
-    # ------------------------------
 
     current_sid = request.args.get('sid', 'z5gxl9')
     current_server = next((s for s in SERVERS if s['id'] == current_sid), SERVERS[0])
