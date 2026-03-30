@@ -16,6 +16,7 @@ SERVERS = [
 WAZE_ID = "827593836229296188"
 LILKNIFE_ID = "821434006843031624"
 
+# --- SENİN TASARIMIN (BİREBİR) ---
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="tr">
@@ -56,7 +57,6 @@ HTML_TEMPLATE = """
             backdrop-filter: blur(10px);
         }
 
-        /* --- LOGO VE SOCIAL KUTULARI EŞİT GENİŞLİKTE OLURSA ORTA KISIM TAM MERKEZLENİR --- */
         .logo-box { display: flex; align-items: center; width: 300px; flex-shrink: 0; }
         .social-box { width: 300px; text-align: right; flex-shrink: 0; }
 
@@ -70,7 +70,6 @@ HTML_TEMPLATE = """
             background: rgba(255,255,255,0.02);
         }
 
-        /* --- BURASI ORTALAMA İŞLEMİNİ YAPAR --- */
         .nav-server-switcher { 
             flex-grow: 1; 
             display: flex; 
@@ -277,23 +276,41 @@ function filterTable() {
 def home():
     current_sid = request.args.get('sid', 'z5gxl9')
     current_server = next((s for s in SERVERS if s['id'] == current_sid), SERVERS[0])
+    
+    # 19:50 hatasını engellemek için varsayılan değerler
+    players_list = []
+    count = 0
+    
     try:
         url = f"https://servers-frontend.fivem.net/api/servers/single/{current_sid}"
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(url, headers=headers, timeout=15)
-        players_list = []
+        # Daha sağlam bir header (FiveM API bazen boş botları engeller)
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0'}
+        
+        response = requests.get(url, headers=headers, timeout=12) # 15 saniye çok uzun, 12 saniye ideal
+        
         if response.status_code == 200:
             data = response.json().get("Data", {})
-            players_raw = sorted(data.get("players") or [], key=lambda x: x.get("id", 0))
+            players_raw = data.get("players") or []
+            # Sort işlemi sırasında oyuncu listesi boşsa hata vermemesi için kontrol
+            players_raw = sorted(players_raw, key=lambda x: x.get("id", 0))
+            
             for p in players_raw:
                 steam, discord = "Yok", "Bağlı Değil"
                 for identifier in p.get("identifiers", []):
                     if "steam:" in identifier: steam = identifier.split(":")[1]
                     elif "discord:" in identifier: discord = identifier.split(":")[1]
                 players_list.append({"id": p.get("id"), "name": p.get("name"), "steam": steam, "discord": discord})
-        return render_template_string(HTML_TEMPLATE, players=players_list, count=len(players_list), waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
-    except:
-        return render_template_string(HTML_TEMPLATE, players=[], count=0, waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
+            
+            count = len(players_list)
+            # Eğer player listesi API'den kapalıysa ama sunucu doluysa:
+            if count == 0 and data.get("clients"):
+                count = data.get("clients")
+                
+    except Exception:
+        # Hata anında bile sayfa çökmeyecek, senin template'ini boş verilerle basacak
+        pass
+
+    return render_template_string(HTML_TEMPLATE, players=players_list, count=count, waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
