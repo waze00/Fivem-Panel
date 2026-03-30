@@ -116,7 +116,6 @@ HTML_TEMPLATE = """
         .discord-link:hover { color: var(--discord-blue); }
         .container { width: 90%; max-width: 1200px; margin: 40px auto; }
         
-        /* Kartların ve Gridin Düzenlendiği Kısım */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; padding: 10px; }
         .card { 
             background: var(--card); 
@@ -149,7 +148,24 @@ HTML_TEMPLATE = """
         table { width: 100%; border-collapse: collapse; }
         th { background: rgba(0,0,0,0.3); padding: 15px; text-align: left; color: var(--primary); font-family: 'Orbitron'; font-size: 10px; }
         td { padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 14px; }
-        #toast { visibility: hidden; min-width: 200px; background-color: var(--primary); color: #fff; text-align: center; border-radius: 8px; padding: 12px; position: fixed; z-index: 3000; left: 50%; bottom: 30px; transform: translateX(-50%); font-weight: bold; }
+        
+        #toast { 
+            visibility: hidden; 
+            min-width: 200px; 
+            background-color: var(--primary); 
+            /* WELLGUN (z5rgx4) seçiliyse yazı siyah, değilse beyaz */
+            color: {{ '#000' if current_server.id == 'z5rgx4' else '#fff' }}; 
+            text-align: center; 
+            border-radius: 8px; 
+            padding: 12px; 
+            position: fixed; 
+            z-index: 3000; 
+            left: 50%; 
+            bottom: 30px; 
+            transform: translateX(-50%); 
+            font-weight: bold; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
         #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
         @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
         @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
