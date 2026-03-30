@@ -277,21 +277,18 @@ def home():
     current_sid = request.args.get('sid', 'z5gxl9')
     current_server = next((s for s in SERVERS if s['id'] == current_sid), SERVERS[0])
     
-    # 19:50 hatasını engellemek için varsayılan değerler
     players_list = []
     count = 0
     
     try:
         url = f"https://servers-frontend.fivem.net/api/servers/single/{current_sid}"
-        # Daha sağlam bir header (FiveM API bazen boş botları engeller)
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0'}
-        
-        response = requests.get(url, headers=headers, timeout=12) # 15 saniye çok uzun, 12 saniye ideal
+        # Timeout'u 8 saniyeye çektik, FiveM API gecikince siteyi dondurmasın.
+        response = requests.get(url, headers=headers, timeout=8) 
         
         if response.status_code == 200:
             data = response.json().get("Data", {})
             players_raw = data.get("players") or []
-            # Sort işlemi sırasında oyuncu listesi boşsa hata vermemesi için kontrol
             players_raw = sorted(players_raw, key=lambda x: x.get("id", 0))
             
             for p in players_raw:
@@ -302,15 +299,17 @@ def home():
                 players_list.append({"id": p.get("id"), "name": p.get("name"), "steam": steam, "discord": discord})
             
             count = len(players_list)
-            # Eğer player listesi API'den kapalıysa ama sunucu doluysa:
             if count == 0 and data.get("clients"):
                 count = data.get("clients")
                 
     except Exception:
-        # Hata anında bile sayfa çökmeyecek, senin template'ini boş verilerle basacak
+        # Hata anında bile çökmek yerine boş tablo gösteriyoruz.
         pass
 
     return render_template_string(HTML_TEMPLATE, players=players_list, count=count, waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
 
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # --- CRON JOB İÇİN KRİTİK DÜZENLEMELER ---
+    # use_reloader=False: Flask'ın portu kilitlemesini ve Cron Job hatası vermesini önler.
+    # debug=False: Canlı sunucu için en güvenli ve stabil moddur.
+    app.run(debug=False, host='0.0.0.0', port=5000, use_reloader=False)
