@@ -305,7 +305,28 @@ function filterTable() {
 # --- CRON JOB İÇİN ÖZEL PİNG YOLU ---
 @app.route("/ping")
 def ping():
-    return "1", 200
+    def background_task():
+        # Her ping atıldığında tüm sunucuları değil, 
+        # API'yi yormamak için sırayla veya kontrollü çekelim
+        for srv in SERVERS:
+            try:
+                sid = srv['id']
+                url = f"https://servers-frontend.fivem.net/api/servers/single/{sid}"
+                headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                
+                response = requests.get(url, headers=headers, timeout=10)
+                if response.status_code == 200:
+                    data = response.json().get("Data", {})
+                    players_raw = data.get("players") or []
+                    
+                    # Mevcut kayıt fonksiyonunu çağır
+                    update_history_bg(sid, players_raw)
+            except Exception as e:
+                print(f"Cron hatası ({srv['name']}): {e}")
+
+    # İşlemi arka planda başlat ki Cron Job hemen "200 OK" alabilsin
+    threading.Thread(target=background_task).start()
+    return "Veri toplama tetiklendi", 200
 
 import threading # Dosyanın en üstüne bunu eklemeyi unutma!
 
