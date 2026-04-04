@@ -1,8 +1,38 @@
 import os
 import requests
+import mysql.connector
+import threading
 from flask import Flask, render_template_string, url_for, request
 
 app = Flask(__name__)
+
+# Takip etmek istediğin sunucuların ID'lerini buraya ekle
+SUNUCU_IDLERI = ["z5gxl9", "z5rgx4", "zrqlap", "epx97a", "zem7ky" ]
+
+# MySQL Bilgileri (Aiven'dan aldığın şifreyi tırnak içine yaz)
+db_config = {
+    'host': 'fpanelwaze-mustafaefe4998-1339.g.aivencloud.com',
+    'user': 'avnadmin',
+    'password': 'AVNS_y-_auvMaafLqJhxCaoG', 
+    'database': 'defaultdb',
+    'port': 21023
+}
+
+def get_db_connection():
+    return mysql.connector.connect(**db_config)
+
+# Tabloları oluşturma fonksiyonu
+def init_db():
+    try:
+        db = get_db_connection()
+        cursor = db.cursor()
+        cursor.execute("CREATE TABLE IF NOT EXISTS site_logs (id INT AUTO_INCREMENT PRIMARY KEY, ip VARCHAR(45), zaman TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS player_history (id INT AUTO_INCREMENT PRIMARY KEY, srv_id VARCHAR(50), p_name VARCHAR(255), p_steam VARCHAR(100), p_discord VARCHAR(100), zaman TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        db.commit()
+        cursor.close()
+        db.close()
+    except Exception as e:
+        print(f"DB Hatası: {e}")
 
 # --- SUNUCU TANIMLAMALARI ---
 SERVERS = [
@@ -277,24 +307,77 @@ function filterTable() {
 def ping():
     return "1", 200
 
+import threading # Dosyanın en üstüne bunu eklemeyi unutma!
+
+def update_history_bg(current_sid, players_raw):
+    """Veritabanı işlemlerini arka planda yapan işçi fonksiyon"""
+    try:
+        db_save = get_db_connection()
+        cursor_save = db_save.cursor()
+        
+        for p in players_raw:
+            steam, discord = "Yok", "Bağlı Değil"
+            for identifier in p.get("identifiers", []):
+                if "steam:" in identifier: 
+                    steam = identifier.split(":")[1]
+                elif "discord:" in identifier: 
+                    discord = identifier.split(":")[1]
+            
+            # 1. ADIM: Oyuncunun veritabanındaki EN SON kaydını kontrol et
+            # (Tablonda 'zaman' veya 'id' kolonu hangisiyse ona göre sıralıyoruz)
+            cursor_save.execute("""
+                SELECT p_name, p_discord 
+                FROM player_history 
+                WHERE p_steam = %s 
+                ORDER BY zaman DESC LIMIT 1
+            """, (steam,))
+            
+            last_record = cursor_save.fetchone()
+
+            # 2. ADIM: Karar Mekanizması
+            if not last_record:
+                # Oyuncu veritabanında hiç yoksa ilk kaydını oluştur
+                cursor_save.execute("INSERT INTO player_history (srv_id, p_name, p_steam, p_discord) VALUES (%s, %s, %s, %s)",
+                                   (current_sid, p.get("name"), steam, discord))
+                print(f"-> Yeni Oyuncu Kaydedildi: {p.get('name')}")
+            
+            else:
+                old_name = last_record[0]
+                old_discord = last_record[1]
+                
+                # Eğer isim veya discord o günden bugüne değişmişse yeni kayıt at
+                if old_name != p.get("name") or old_discord != discord:
+                    cursor_save.execute("INSERT INTO player_history (srv_id, p_name, p_steam, p_discord) VALUES (%s, %s, %s, %s)",
+                                       (current_sid, p.get("name"), steam, discord))
+                    print(f"-> Bilgi Güncellendi (Yeni Kayıt): {p.get('name')}")
+                
+                # Değişiklik yoksa bu 'else' bloğuna bir şey yazmıyoruz, yani pas geçiyor.
+
+        db_save.commit()
+        cursor_save.close()
+        db_save.close()
+    except Exception as e:
+        print(f"Arka plan kayıt hatası: {e}")
+
 @app.route("/")
 def home():
-    current_sid = request.args.get('sid', 'z5gxl9')
+    current_sid = request.args.get('sid', 'z5gxl9') # Varsayılan server
     current_server = next((s for s in SERVERS if s['id'] == current_sid), SERVERS[0])
     
     players_list = []
     count = 0
     
     try:
+        # 1. Önce sadece FiveM API'den veriyi çekiyoruz (Hızlı işlem)
         url = f"https://servers-frontend.fivem.net/api/servers/single/{current_sid}"
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0'}
-        response = requests.get(url, headers=headers, timeout=8) 
+        response = requests.get(url, headers=headers, timeout=5) 
         
         if response.status_code == 200:
             data = response.json().get("Data", {})
             players_raw = data.get("players") or []
-            players_raw = sorted(players_raw, key=lambda x: x.get("id", 0))
             
+            # Ekranda görünecek listeyi hızlıca hazırla
             for p in players_raw:
                 steam, discord = "Yok", "Bağlı Değil"
                 for identifier in p.get("identifiers", []):
@@ -305,11 +388,27 @@ def home():
             count = len(players_list)
             if count == 0 and data.get("clients"):
                 count = data.get("clients")
-                
-    except Exception:
-        pass
 
+            count = len(players_list)
+            
+            # --- SIRALAMA BURAYA GELİYOR ---
+            # ID'leri sayıya çevirerek (int) küçükten büyüğe sıralar
+            players_list.sort(key=lambda x: int(x['id']))
+            # ------------------------------
+
+            if count == 0 and data.get("clients"):
+                count = data.get("clients")
+
+            # 2. KRİTİK NOKTA: Veritabanı işini arka plana at ve bekleme!
+            # Bu satır sayesinde site veritabanını beklemeden açılır.
+            threading.Thread(target=update_history_bg, args=(current_sid, players_raw)).start()
+
+    except Exception as e:
+        print(f"Ana sayfa hatası: {e}")
+
+    # 3. Hemen sayfayı render et (Kullanıcı beklemesin)
     return render_template_string(HTML_TEMPLATE, players=players_list, count=count, waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
 
 if __name__ == "__main__":
-    app.run(debug=False, host='0.0.0.0', port=5000, use_reloader=False)
+    init_db()
+    app.run(debug=False, host='0.0.0.0', port=5000)
