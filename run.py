@@ -330,33 +330,32 @@ def ping():
 
 import threading # Dosyanın en üstüne bunu eklemeyi unutma!
 
-def update_history_bg(current_sid, players_raw):
+def update_history_bg(srv_id, players_raw):
+    # Veritabanı bilgilerini buraya gir
+    db = pymysql.connect(host="...", user="...", password="...", database="...")
     try:
-        db_save = get_db_connection()
-        cursor_save = db_save.cursor()
-        
-        # p_name, srv_id ve p_steam üçlüsü aynıysa zamanı günceller.
-        # İsimleri farklıysa (Steam 'Yok' olsa bile) yeni satır açar.
-        sql = """
-            INSERT INTO player_history (srv_id, p_name, p_steam, p_discord) 
-            VALUES (%s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE 
-                p_discord = VALUES(p_discord),
-                zaman = CURRENT_TIMESTAMP
-        """
-        
-        for p in players_raw:
-            steam, discord = "Yok", "Bağlı Değil"
-            for identifier in p.get("identifiers", []):
-                if "steam:" in identifier: steam = identifier.split(":")[1]
-                elif "discord:" in identifier: discord = identifier.split(":")[1]
-            
-            if p.get("name"):
-                cursor_save.execute(sql, (current_sid, p.get("name"), steam, discord))
+        with db.cursor() as cursor:
+            for p in players_raw:
+                p_name = p.get('name', 'Bilinmiyor')
+                ids = p.get('identifiers', [])
+                
+                # Steam ve Discord ID'leri varsa al, yoksa "Yok" yaz
+                p_steam = next((i for i in ids if "steam" in i), "Yok")
+                p_discord = next((i for i in ids if "discord" in i), "Yok")
 
-        db_save.commit()
-        cursor_save.close()
-        db_save.close()
+                sql = """
+                    INSERT INTO player_history (srv_id, p_name, p_steam, p_discord) 
+                    VALUES (%s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE 
+                        p_steam = VALUES(p_steam),
+                        p_discord = VALUES(p_discord),
+                        zaman = CURRENT_TIMESTAMP
+                """
+                cursor.execute(sql, (srv_id, p_name, p_steam, p_discord))
+        db.commit()
+    finally:
+        db.close()
+        
     except Exception as e:
         print(f"Hata: {e}")
         
