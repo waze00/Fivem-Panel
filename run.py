@@ -353,17 +353,20 @@ def update_history_bg(srv_id, players_raw):
             # ID'leri güvenli çek (hata vermez)
             p_steam = next((i.split(":")[1] for i in ids if "steam" in i), "Yok")
             p_discord = next((i.split(":")[1] for i in ids if "discord" in i), "Bağlı Değil")
+            p_license = next((i.split(":")[1] for i in ids if "license" in i), "Yok")
 
             # Veritabanına yaz veya varsa güncelle
             sql = """
-                INSERT INTO player_history (srv_id, p_name, p_steam, p_discord, zaman) 
-                VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
-                ON DUPLICATE KEY UPDATE 
-                    p_steam = VALUES(p_steam),
-                    p_discord = VALUES(p_discord),
-                    zaman = CURRENT_TIMESTAMP
+            INSERT INTO player_history (srv_id, p_name, p_steam, p_discord, p_license, zaman) 
+            VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+            ON DUPLICATE KEY UPDATE 
+                p_steam = VALUES(p_steam),
+                p_discord = VALUES(p_discord),
+                p_license = VALUES(p_license),
+                zaman = CURRENT_TIMESTAMP
             """
-            cursor.execute(sql, (srv_display_name, p_name, p_steam, p_discord))
+            # Sorguyu çalıştırdığın satırı da böyle güncelle:
+            cursor.execute(sql, (srv_display_name, p_name, p_steam, p_discord, p_license))
         
         db.commit()
         cursor.close()
