@@ -335,12 +335,12 @@ def update_history_bg(current_sid, players_raw):
         db_save = get_db_connection()
         cursor_save = db_save.cursor()
         
-        # INSERT ... ON DUPLICATE KEY UPDATE yapısı
+        # p_name ve srv_id üzerinden kontrol yapar
         sql = """
             INSERT INTO player_history (srv_id, p_name, p_steam, p_discord) 
             VALUES (%s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE 
-                p_name = VALUES(p_name),
+                p_steam = VALUES(p_steam),
                 p_discord = VALUES(p_discord),
                 zaman = CURRENT_TIMESTAMP
         """
@@ -348,10 +348,12 @@ def update_history_bg(current_sid, players_raw):
         for p in players_raw:
             steam, discord = "Yok", "Bağlı Değil"
             for identifier in p.get("identifiers", []):
-                if "steam:" in identifier: steam = identifier.split(":")[1]
-                elif "discord:" in identifier: discord = identifier.split(":")[1]
+                if "steam:" in identifier: 
+                    steam = identifier.split(":")[1]
+                elif "discord:" in identifier: 
+                    discord = identifier.split(":")[1]
             
-            # İsmi olan her oyuncuyu işle (Steam yoksa bile ismiyle günceller)
+            # Sadece ismi olanları kaydet
             if p.get("name"):
                 cursor_save.execute(sql, (current_sid, p.get("name"), steam, discord))
 
