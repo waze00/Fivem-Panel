@@ -331,33 +331,38 @@ def ping():
 import threading # Dosyanın en üstüne bunu eklemeyi unutma!
 
 def update_history_bg(srv_id, players_raw):
-    # Veritabanı bilgilerini buraya gir
-    db = pymysql.connect(host="...", user="...", password="...", database="...")
+    db = None
     try:
-        with db.cursor() as cursor:
-            for p in players_raw:
-                p_name = p.get('name', 'Bilinmiyor')
-                ids = p.get('identifiers', [])
-                
-                # Steam ve Discord ID'leri varsa al, yoksa "Yok" yaz
-                p_steam = next((i for i in ids if "steam" in i), "Yok")
-                p_discord = next((i for i in ids if "discord" in i), "Yok")
-
-                sql = """
-                    INSERT INTO player_history (srv_id, p_name, p_steam, p_discord) 
-                    VALUES (%s, %s, %s, %s)
-                    ON DUPLICATE KEY UPDATE 
-                        p_steam = VALUES(p_steam),
-                        p_discord = VALUES(p_discord),
-                        zaman = CURRENT_TIMESTAMP
-                """
-                cursor.execute(sql, (srv_id, p_name, p_steam, p_discord))
-        db.commit()
-    finally:
-        db.close()
+        # Senin yukarıda tanımladığın bağlantı fonksiyonunu kullanıyoruz
+        db = get_db_connection() 
+        cursor = db.cursor()
         
+        for p in players_raw:
+            p_name = p.get('name', 'Bilinmiyor')
+            ids = p.get('identifiers', [])
+            
+            # Steam ve Discord ID'lerini çek
+            p_steam = next((i.split(":")[1] for i in ids if "steam" in i), "Yok")
+            p_discord = next((i.split(":")[1] for i in ids if "discord" in i), "Yok")
+
+            # SQL Sorgusu (Unique key kuralına göre çalışır)
+            sql = """
+                INSERT INTO player_history (srv_id, p_name, p_steam, p_discord, zaman) 
+                VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                ON DUPLICATE KEY UPDATE 
+                    p_steam = VALUES(p_steam),
+                    p_discord = VALUES(p_discord),
+                    zaman = CURRENT_TIMESTAMP
+            """
+            cursor.execute(sql, (srv_id, p_name, p_steam, p_discord))
+        
+        db.commit()
+        cursor.close()
     except Exception as e:
-        print(f"Hata: {e}")
+        print(f"Veritabanı kayıt hatası: {e}")
+    finally:
+        if db and db.is_connected():
+            db.close()
         
 @app.route("/")
 def home():
