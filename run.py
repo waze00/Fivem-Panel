@@ -333,19 +333,19 @@ import threading # Dosyanın en üstüne bunu eklemeyi unutma!
 def update_history_bg(srv_id, players_raw):
     db = None
     try:
-        # Senin yukarıda tanımladığın bağlantı fonksiyonunu kullanıyoruz
-        db = get_db_connection() 
+        # Pymysql değil, senin yukarıdaki get_db_connection fonksiyonunu kullanıyoruz
+        db = get_db_connection()
         cursor = db.cursor()
         
         for p in players_raw:
             p_name = p.get('name', 'Bilinmiyor')
             ids = p.get('identifiers', [])
             
-            # Steam ve Discord ID'lerini çek
+            # ID'leri güvenli çek (hata vermez)
             p_steam = next((i.split(":")[1] for i in ids if "steam" in i), "Yok")
-            p_discord = next((i.split(":")[1] for i in ids if "discord" in i), "Yok")
+            p_discord = next((i.split(":")[1] for i in ids if "discord" in i), "Bağlı Değil")
 
-            # SQL Sorgusu (Unique key kuralına göre çalışır)
+            # Veritabanına yaz veya varsa güncelle
             sql = """
                 INSERT INTO player_history (srv_id, p_name, p_steam, p_discord, zaman) 
                 VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
@@ -359,7 +359,7 @@ def update_history_bg(srv_id, players_raw):
         db.commit()
         cursor.close()
     except Exception as e:
-        print(f"Veritabanı kayıt hatası: {e}")
+        print(f"Veritabanı Hatası: {e}")
     finally:
         if db and db.is_connected():
             db.close()
