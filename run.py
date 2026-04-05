@@ -331,6 +331,15 @@ def ping():
 import threading # Dosyanın en üstüne bunu eklemeyi unutma!
 
 def update_history_bg(srv_id, players_raw):
+    names_map = {
+        "z5gxl9": "MDPVP", 
+        "z5rgx4": "WELLGUN", 
+        "zrqlap": "LETRA", 
+        "epx97a": "DADDY", 
+        "zem7ky": "GUID"
+    }
+    srv_display_name = names_map.get(srv_id, srv_id) # İsim varsa al, yoksa ID kalsın
+    
     db = None
     try:
         # Pymysql değil, senin yukarıdaki get_db_connection fonksiyonunu kullanıyoruz
