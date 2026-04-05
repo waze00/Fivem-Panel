@@ -331,54 +331,35 @@ def ping():
 import threading # Dosyanın en üstüne bunu eklemeyi unutma!
 
 def update_history_bg(current_sid, players_raw):
-    """Veritabanı işlemlerini arka planda yapan işçi fonksiyon"""
     try:
         db_save = get_db_connection()
         cursor_save = db_save.cursor()
         
+        # SQL: Steam ID varsa günceller, yoksa yeni satır açar.
+        sql = """
+            INSERT INTO player_history (srv_id, p_name, p_steam, p_discord) 
+            VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE 
+                srv_id = VALUES(srv_id),
+                p_name = VALUES(p_name),
+                p_discord = VALUES(p_discord),
+                zaman = CURRENT_TIMESTAMP
+        """
+        
         for p in players_raw:
             steam, discord = "Yok", "Bağlı Değil"
             for identifier in p.get("identifiers", []):
-                if "steam:" in identifier: 
-                    steam = identifier.split(":")[1]
-                elif "discord:" in identifier: 
-                    discord = identifier.split(":")[1]
+                if "steam:" in identifier: steam = identifier.split(":")[1]
+                elif "discord:" in identifier: discord = identifier.split(":")[1]
             
-            # 1. ADIM: Oyuncunun veritabanındaki EN SON kaydını kontrol et
-            # (Tablonda 'zaman' veya 'id' kolonu hangisiyse ona göre sıralıyoruz)
-            cursor_save.execute("""
-                SELECT p_name, p_discord 
-                FROM player_history 
-                WHERE p_steam = %s 
-                ORDER BY zaman DESC LIMIT 1
-            """, (steam,))
-            
-            last_record = cursor_save.fetchone()
-
-            # 2. ADIM: Karar Mekanizması
-            if not last_record:
-                # Oyuncu veritabanında hiç yoksa ilk kaydını oluştur
-                cursor_save.execute("INSERT INTO player_history (srv_id, p_name, p_steam, p_discord) VALUES (%s, %s, %s, %s)",
-                                   (current_sid, p.get("name"), steam, discord))
-                print(f"-> Yeni Oyuncu Kaydedildi: {p.get('name')}")
-            
-            else:
-                old_name = last_record[0]
-                old_discord = last_record[1]
-                
-                # Eğer isim veya discord o günden bugüne değişmişse yeni kayıt at
-                if old_name != p.get("name") or old_discord != discord:
-                    cursor_save.execute("INSERT INTO player_history (srv_id, p_name, p_steam, p_discord) VALUES (%s, %s, %s, %s)",
-                                       (current_sid, p.get("name"), steam, discord))
-                    print(f"-> Bilgi Güncellendi (Yeni Kayıt): {p.get('name')}")
-                
-                # Değişiklik yoksa bu 'else' bloğuna bir şey yazmıyoruz, yani pas geçiyor.
+            if steam != "Yok":
+                cursor_save.execute(sql, (current_sid, p.get("name"), steam, discord))
 
         db_save.commit()
         cursor_save.close()
         db_save.close()
     except Exception as e:
-        print(f"Arka plan kayıt hatası: {e}")
+        print(f"Hata: {e}")
 
 @app.route("/")
 def home():
