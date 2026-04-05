@@ -352,7 +352,7 @@ def update_history_bg(current_sid, players_raw):
                 if "steam:" in identifier: steam = identifier.split(":")[1]
                 elif "discord:" in identifier: discord = identifier.split(":")[1]
             
-            if steam != "Yok":
+            if steam != "Yok" or p.get("name"):
                 cursor_save.execute(sql, (current_sid, p.get("name"), steam, discord))
 
         db_save.commit()
