@@ -335,7 +335,7 @@ def update_history_bg(current_sid, players_raw):
         db_save = get_db_connection()
         cursor_save = db_save.cursor()
         
-        # p_name ve srv_id üzerinden kontrol yapar
+        # Bu sorgu: İsim (p_name) ve Sunucu (srv_id) aynıysa mevcut satırı GÜNCELLER.
         sql = """
             INSERT INTO player_history (srv_id, p_name, p_steam, p_discord) 
             VALUES (%s, %s, %s, %s)
@@ -353,7 +353,7 @@ def update_history_bg(current_sid, players_raw):
                 elif "discord:" in identifier: 
                     discord = identifier.split(":")[1]
             
-            # Sadece ismi olanları kaydet
+            # İsmi olan her oyuncuyu işle
             if p.get("name"):
                 cursor_save.execute(sql, (current_sid, p.get("name"), steam, discord))
 
