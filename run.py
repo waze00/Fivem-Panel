@@ -363,7 +363,7 @@ def update_history_bg(srv_id, players_raw):
                     p_discord = VALUES(p_discord),
                     zaman = CURRENT_TIMESTAMP
             """
-            cursor.execute(sql, (srv_id, p_name, p_steam, p_discord))
+            cursor.execute(sql, (srv_display_name, p_name, p_steam, p_discord))
         
         db.commit()
         cursor.close()
