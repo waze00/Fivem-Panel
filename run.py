@@ -8,6 +8,9 @@ from curl_cffi import requests as curl_requests
 
 app = Flask(__name__)
 
+# --- PROXY YAPILANDIRMASI ---
+PROXY_URL = "https://sharkspanel.mustafaefe4998.workers.dev"
+
 # Takip etmek istediğin sunucuların ID'lerini buraya ekle
 SUNUCU_IDLERI = ["z5gxl9", "z5rgx4", "zrqlap", "epx97a", "zem7ky" ]
 
@@ -35,6 +38,7 @@ def init_db():
         db.close()
     except Exception as e:
         print(f"DB Hatası: {e}")
+
 
 # --- SUNUCU TANIMLAMALARI ---
 SERVERS = [
@@ -325,7 +329,8 @@ def get_fivem_data(current_sid):
     ):
         return CACHE["data"]
 
-    url = f"https://servers-frontend.fivem.net/api/servers/single/{current_sid}"
+    # Sadece bu aşağıdaki satırı senin proxy'yi kullanacak şekilde değiştirdik:
+    url = f"{PROXY_URL}/api/servers/single/{current_sid}"
     
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
