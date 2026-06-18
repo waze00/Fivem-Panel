@@ -316,25 +316,25 @@ function filterTable() {
 @app.route("/ping")
 def ping():
     def background_task():
-        # Her ping atıldığında tüm sunucuları değil, 
-        # API'yi yormamak için sırayla veya kontrollü çekelim
+        # Cfx.re yeni API adresi ve gerçek tarayıcı başlıkları entegre edildi
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Origin': 'https://servers.fivem.net'
+        }
         for srv in SERVERS:
             try:
                 sid = srv['id']
-                url = f"https://servers-frontend.fivem.net/api/servers/single/{sid}"
-                headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                url = f"https://servers-frontend.cfx.re/api/servers/single/{sid}"
                 
                 response = requests.get(url, headers=headers, timeout=10)
                 if response.status_code == 200:
                     data = response.json().get("Data", {})
                     players_raw = data.get("players") or []
-                    
-                    # Mevcut kayıt fonksiyonunu çağır
                     update_history_bg(sid, players_raw)
             except Exception as e:
                 print(f"Cron hatası ({srv['name']}): {e}")
 
-    # İşlemi arka planda başlat ki Cron Job hemen "200 OK" alabilsin
     threading.Thread(target=background_task).start()
     return "Veri toplama tetiklendi", 200
 
