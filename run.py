@@ -311,7 +311,24 @@ function filterTable() {
 </body>
 </html>
 """
-
+def fetch_fivem_data(server_sid):
+    # FiveM'in Render engeline takılmamak için isteği proxy üzerinden geçiriyoruz
+    url = f"https://api.allorigins.win/get?url={requests.utils.quote(f'https://servers-frontend.cfx.re/api/servers/single/{server_sid}')}"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            proxy_data = response.json()
+            contents = proxy_data.get("contents")
+            if contents:
+                import json
+                actual_data = json.loads(contents)
+                return actual_data.get("Data", {})
+    except Exception as e:
+        print(f"Proxy Baglanti Hatasi ({server_sid}): {e}")
+    return {}
 # --- CRON JOB İÇİN ÖZEL PİNG YOLU ---
 @app.route("/ping")
 def ping():
@@ -395,18 +412,9 @@ def home():
     count = 0
     
     try:
-        # 1. Önce sadece FiveM API'den veriyi çekiyoruz (Hızlı işlem)
-        url = f"https://servers-frontend.cfx.re/api/servers/single/{current_sid}"
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'application/json, text/plain, */*',
-            'Origin': 'https://servers.fivem.net'
-        }
-        response = requests.get(url, headers=headers, timeout=5) 
-        
-        if response.status_code == 200:
-            data = response.json().get("Data", {})
-            players_raw = data.get("players") or []
+        # Eski url ve requests.get satırlarını silip yerine bunu yazıyorsun:
+        data = fetch_fivem_data(current_sid)
+        players_raw = data.get("players") or []
             
             # Ekranda görünecek listeyi hızlıca hazırla
             for p in players_raw:
@@ -435,4 +443,5 @@ def home():
     
 if __name__ == "__main__":
     init_db()
-    app.run(debug=False, host='0.0.0.0', port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
