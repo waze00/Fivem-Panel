@@ -53,6 +53,9 @@ SERVERS = [
     {"id": "zem7ky", "name": "GUID PVP 3.0", "short_name": "GUID", "logo": "guid.gif", "primary_color": "#beaf1f", "accent_color": "#ffffff"},
 ]
 
+# KODUN EN BAŞINA (SERVERS listesinin altına) EKLE:
+cache = {"players": [], "count": 0}
+
 WAZE_ID = "827593836229296188"
 LILKNIFE_ID = "821434006843031624"
 
@@ -330,22 +333,28 @@ def fetch_fivem_data(server_sid):
         print(f"Proxy Baglanti Hatasi ({server_sid}): {e}")
     return {}
 # --- CRON JOB İÇİN ÖZEL PİNG YOLU ---
+# ping() FONKSİYONUNU BU ŞEKİLDE GÜNCELLE:
 @app.route("/ping")
 def ping():
     def background_task():
         for srv in SERVERS:
-            try:
-                sid = srv['id']
-                # Burayı da proxy kullanan yeni fonksiyon ile değiştirdik:
-                data = fetch_fivem_data(sid)
-                players_raw = data.get("players") or []
-                if players_raw:
-                    update_history_bg(sid, players_raw)
-            except Exception as e:
-                print(f"Cron hatası ({srv['name']}): {e}")
-
+            sid = srv['id']
+            # Veriyi çek
+            data = fetch_fivem_data(sid)
+            players_raw = data.get("players") or []
+            
+            # Eğer şu anki seçili server ise cache'i güncelle
+            current_sid = request.args.get('sid', 'z5gxl9') # Basit bir kontrol
+            if sid == current_sid:
+                cache["players"] = players_raw
+                cache["count"] = len(players_raw)
+            
+            # DB'ye kaydet
+            if players_raw:
+                update_history_bg(sid, players_raw)
+                
     threading.Thread(target=background_task).start()
-    return "Veri toplama tetiklendi", 200
+    return "Veri güncelleme tetiklendi", 200
 
 import threading # Dosyanın en üstüne bunu eklemeyi unutma!
 
@@ -395,40 +404,20 @@ def update_history_bg(srv_id, players_raw):
         if db and db.is_connected():
             db.close()
 
+# home() FONKSİYONUNU BU ŞEKİLDE GÜNCELLE:
 @app.route("/")
 def home():
     current_sid = request.args.get('sid', 'z5gxl9')
     current_server = next((s for s in SERVERS if s['id'] == current_sid), SERVERS[0])
     
-    players_list = []
-    count = 0
-    
-    try:
-        data = fetch_fivem_data(current_sid)
-        players_raw = data.get("players") or []
-            
-        for p in players_raw:
-            steam, discord = "Yok", "Bağlı Değil"
-            for identifier in p.get("identifiers", []):
-                if "steam:" in identifier: 
-                    steam = identifier.split(":")[1]
-                elif "discord:" in identifier: 
-                    discord = identifier.split(":")[1]
-            players_list.append({"id": p.get("id"), "name": p.get("name"), "steam": steam, "discord": discord})
-        
-        count = len(players_list)
-        if count == 0 and data.get("clients"):
-            count = data.get("clients")
-        
-        if players_list:
-            players_list.sort(key=lambda x: int(x['id']))
-
-        threading.Thread(target=update_history_bg, args=(current_sid, players_raw)).start()
-
-    except Exception as e:
-        print(f"Ana sayfa hatası: {e}")
-
-    return render_template_string(HTML_TEMPLATE, players=players_list, count=count, waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
+    # Veri bekleme yok, doğrudan hazır olan 'cache'i kullan
+    return render_template_string(HTML_TEMPLATE, 
+                                  players=cache.get("players", []), 
+                                  count=cache.get("count", 0), 
+                                  waze_id=WAZE_ID, 
+                                  lilknife_id=LILKNIFE_ID, 
+                                  servers_list=SERVERS, 
+                                  current_server=current_server)
 
 # Render'ın portu karıştırmaması için init_db'yi burada güvenli çalıştırıyoruz
 try:
