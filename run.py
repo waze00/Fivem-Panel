@@ -213,8 +213,8 @@ HTML_TEMPLATE = """
     </div>
 
     <div class="social-box">
-        <a href="https://discord.gg/a51" target="_blank" class="discord-link">
-            <i class="fab fa-discord"></i> discord.gg/a51
+        <a href="https://discord.gg/shrks" target="_blank" class="discord-link">
+            <i class="fab fa-discord"></i> discord.gg/shrks
         </a>
     </div>
 </nav>
