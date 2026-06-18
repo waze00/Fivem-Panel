@@ -394,43 +394,40 @@ def update_history_bg(srv_id, players_raw):
     finally:
         if db and db.is_connected():
             db.close()
-        
+
 @app.route("/")
 def home():
-    current_sid = request.args.get('sid', 'z5gxl9') # Varsayılan server
+    current_sid = request.args.get('sid', 'z5gxl9')
     current_server = next((s for s in SERVERS if s['id'] == current_sid), SERVERS[0])
     
     players_list = []
     count = 0
     
     try:
-        # Eski url ve requests.get satırlarını silip yerine bunu yazıyorsun:
         data = fetch_fivem_data(current_sid)
         players_raw = data.get("players") or []
             
-            # Ekranda görünecek listeyi hızlıca hazırla
-            for p in players_raw:
-                steam, discord = "Yok", "Bağlı Değil"
-                for identifier in p.get("identifiers", []):
-                    if "steam:" in identifier: steam = identifier.split(":")[1]
-                    elif "discord:" in identifier: discord = identifier.split(":")[1]
-                players_list.append({"id": p.get("id"), "name": p.get("name"), "steam": steam, "discord": discord})
-            
-            count = len(players_list)
-            if count == 0 and data.get("clients"):
-                count = data.get("clients")
-            
-            # ID'leri sayıya çevirerek (int) küçükten büyüğe sıralar
-            if players_list:
-                players_list.sort(key=lambda x: int(x['id']))
+        for p in players_raw:
+            steam, discord = "Yok", "Bağlı Değil"
+            for identifier in p.get("identifiers", []):
+                if "steam:" in identifier: 
+                    steam = identifier.split(":")[1]
+                elif "discord:" in identifier: 
+                    discord = identifier.split(":")[1]
+            players_list.append({"id": p.get("id"), "name": p.get("name"), "steam": steam, "discord": discord})
+        
+        count = len(players_list)
+        if count == 0 and data.get("clients"):
+            count = data.get("clients")
+        
+        if players_list:
+            players_list.sort(key=lambda x: int(x['id']))
 
-            # 2. KRİTİK NOKTA: Veritabanı işini arka plana at ve bekleme!
-            threading.Thread(target=update_history_bg, args=(current_sid, players_raw)).start()
+        threading.Thread(target=update_history_bg, args=(current_sid, players_raw)).start()
 
     except Exception as e:
         print(f"Ana sayfa hatası: {e}")
 
-    # 3. Hemen sayfayı render et (Kullanıcı beklemesin)
     return render_template_string(HTML_TEMPLATE, players=players_list, count=count, waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
     
 if __name__ == "__main__":
