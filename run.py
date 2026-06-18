@@ -27,7 +27,17 @@ def init_db():
         db = get_db_connection()
         cursor = db.cursor()
         cursor.execute("CREATE TABLE IF NOT EXISTS site_logs (id INT AUTO_INCREMENT PRIMARY KEY, ip VARCHAR(45), zaman TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS player_history (id INT AUTO_INCREMENT PRIMARY KEY, srv_id VARCHAR(50), p_name VARCHAR(255), p_steam VARCHAR(100), p_discord VARCHAR(100), zaman TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS player_history (
+                id INT AUTO_INCREMENT PRIMARY KEY, 
+                srv_id VARCHAR(50), 
+                p_name VARCHAR(255), 
+                p_steam VARCHAR(100), 
+                p_discord VARCHAR(100), 
+                p_license VARCHAR(100), 
+                zaman TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         db.commit()
         cursor.close()
         db.close()
