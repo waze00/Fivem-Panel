@@ -333,21 +333,13 @@ def fetch_fivem_data(server_sid):
 @app.route("/ping")
 def ping():
     def background_task():
-        # Cfx.re yeni API adresi ve gerçek tarayıcı başlıkları entegre edildi
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'application/json, text/plain, */*',
-            'Origin': 'https://servers.fivem.net'
-        }
         for srv in SERVERS:
             try:
                 sid = srv['id']
-                url = f"https://servers-frontend.cfx.re/api/servers/single/{sid}"
-                
-                response = requests.get(url, headers=headers, timeout=10)
-                if response.status_code == 200:
-                    data = response.json().get("Data", {})
-                    players_raw = data.get("players") or []
+                # Burayı da proxy kullanan yeni fonksiyon ile değiştirdik:
+                data = fetch_fivem_data(sid)
+                players_raw = data.get("players") or []
+                if players_raw:
                     update_history_bg(sid, players_raw)
             except Exception as e:
                 print(f"Cron hatası ({srv['name']}): {e}")
