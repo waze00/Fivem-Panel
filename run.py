@@ -397,39 +397,43 @@ def home():
     players_list = []
     count = 0
     
-    try:
-        # 1. Önce sadece FiveM API'den veriyi çekiyoruz (Hızlı işlem)
-        url = f"https://servers-frontend.fivem.net/api/servers/single/{current_sid}"
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0'}
-        
-            data = get_fivem_data(current_sid)
-            players_raw = data.get("players") or []
-            
-            # Ekranda görünecek listeyi hızlıca hazırla
-            for p in players_raw:
-                steam, discord = "Yok", "Bağlı Değil"
-                for identifier in p.get("identifiers", []):
-                    if "steam:" in identifier: steam = identifier.split(":")[1]
-                    elif "discord:" in identifier: discord = identifier.split(":")[1]
-                players_list.append({"id": p.get("id"), "name": p.get("name"), "steam": steam, "discord": discord})
-            
-            count = len(players_list)
-            if count == 0 and data.get("clients"):
-                count = data.get("clients")
+        try:
+        # 1. FiveM API'den veri çek
+        data = get_fivem_data(current_sid)
+        players_raw = data.get("players") or []
 
-            count = len(players_list)
-            
-            # --- SIRALAMA BURAYA GELİYOR ---
-            # ID'leri sayıya çevirerek (int) küçükten büyüğe sıralar
-            players_list.sort(key=lambda x: int(x['id']))
-            # ------------------------------
+        # 2. Oyuncu listesini hazırla
+        for p in players_raw:
+            steam, discord = "Yok", "Bağlı Değil"
 
-            if count == 0 and data.get("clients"):
-                count = data.get("clients")
+            for identifier in p.get("identifiers", []):
+                if "steam:" in identifier:
+                    steam = identifier.split(":")[1]
+                elif "discord:" in identifier:
+                    discord = identifier.split(":")[1]
 
-            # 2. KRİTİK NOKTA: Veritabanı işini arka plana at ve bekleme!
-            # Bu satır sayesinde site veritabanını beklemeden açılır.
-            threading.Thread(target=update_history_bg, args=(current_sid, players_raw)).start()
+            players_list.append({
+                "id": p.get("id"),
+                "name": p.get("name"),
+                "steam": steam,
+                "discord": discord
+            })
+
+        # 3. Oyuncu sayısı
+        count = len(players_list)
+
+        if count == 0 and data.get("clients"):
+            count = data.get("clients")
+
+        # 4. ID sıralama
+        players_list.sort(key=lambda x: int(x['id']))
+
+        # 5. DB işlemini arka plana at
+        threading.Thread(
+            target=update_history_bg,
+            args=(current_sid, players_raw),
+            daemon=True
+        ).start()
 
     except Exception as e:
         print(f"Ana sayfa hatası: {e}")
