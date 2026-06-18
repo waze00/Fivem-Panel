@@ -429,8 +429,13 @@ def home():
         print(f"Ana sayfa hatası: {e}")
 
     return render_template_string(HTML_TEMPLATE, players=players_list, count=count, waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
-    
-if __name__ == "__main__":
+
+# Render'ın portu karıştırmaması için init_db'yi burada güvenli çalıştırıyoruz
+try:
     init_db()
+except Exception as e:
+    print(f"İlk açılış DB hatası pas geçildi: {e}")
+
+if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
