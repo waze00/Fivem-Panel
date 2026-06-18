@@ -1,7 +1,8 @@
 import os
-import requests    
+import requests
 import mysql.connector
 import threading
+import time
 from flask import Flask, render_template_string, url_for, request
 
 app = Flask(__name__)
@@ -19,7 +20,7 @@ db_config = {
 }
 
 def get_db_connection():
-    return mysql.connector.connect(**db_config)
+    return mysql.connector.connect(**db_config)             
 
 # Tabloları oluşturma fonksiyonu
 def init_db():
@@ -27,17 +28,7 @@ def init_db():
         db = get_db_connection()
         cursor = db.cursor()
         cursor.execute("CREATE TABLE IF NOT EXISTS site_logs (id INT AUTO_INCREMENT PRIMARY KEY, ip VARCHAR(45), zaman TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS player_history (
-                id INT AUTO_INCREMENT PRIMARY KEY, 
-                srv_id VARCHAR(50), 
-                p_name VARCHAR(255), 
-                p_steam VARCHAR(100), 
-                p_discord VARCHAR(100), 
-                p_license VARCHAR(100), 
-                zaman TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+        cursor.execute("CREATE TABLE IF NOT EXISTS player_history (id INT AUTO_INCREMENT PRIMARY KEY, srv_id VARCHAR(50), p_name VARCHAR(255), p_steam VARCHAR(100), p_discord VARCHAR(100), zaman TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
         db.commit()
         cursor.close()
         db.close()
@@ -52,10 +43,13 @@ SERVERS = [
     {"id": "epx97a", "name": "DADDY 1.0", "short_name": "DADDY", "logo": "daddy.png", "primary_color": "#cc2e2e", "accent_color": "#ffffff"},
     {"id": "zem7ky", "name": "GUID PVP 3.0", "short_name": "GUID", "logo": "guid.gif", "primary_color": "#beaf1f", "accent_color": "#ffffff"},
 ]
+CACHE = {
+    "data": None,
+    "time": 0,
+    "sid": None
+}
 
-# KODUN EN BAŞINA (SERVERS listesinin altına) EKLE:
-cache = {"players": [], "count": 0}
-
+CACHE_SECONDS = 15
 WAZE_ID = "827593836229296188"
 LILKNIFE_ID = "821434006843031624"
 
@@ -219,8 +213,8 @@ HTML_TEMPLATE = """
     </div>
 
     <div class="social-box">
-        <a href="https://discord.gg/shrks" target="_blank" class="discord-link">
-            <i class="fab fa-discord"></i> discord.gg/shrks
+        <a href="https://discord.gg/a51" target="_blank" class="discord-link">
+            <i class="fab fa-discord"></i> discord.gg/a51
         </a>
     </div>
 </nav>
@@ -314,117 +308,135 @@ function filterTable() {
 </body>
 </html>
 """
-def fetch_fivem_data(server_sid):
-    # FiveM'in Render engeline takılmamak için isteği proxy üzerinden geçiriyoruz
-    url = f"https://api.allorigins.win/get?url={requests.utils.quote(f'https://servers-frontend.cfx.re/api/servers/single/{server_sid}')}"
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    }
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code == 200:
-            proxy_data = response.json()
-            contents = proxy_data.get("contents")
-            if contents:
-                import json
-                actual_data = json.loads(contents)
-                return actual_data.get("Data", {})
-    except Exception as e:
-        print(f"Proxy Baglanti Hatasi ({server_sid}): {e}")
-    return {}
+
 # --- CRON JOB İÇİN ÖZEL PİNG YOLU ---
-# ping() FONKSİYONUNU BU ŞEKİLDE GÜNCELLE:
 @app.route("/ping")
 def ping():
-    def background_task():
-        for srv in SERVERS:
-            sid = srv['id']
-            # Veriyi çek
-            data = fetch_fivem_data(sid)
-            players_raw = data.get("players") or []
-            
-            # Eğer şu anki seçili server ise cache'i güncelle
-            current_sid = request.args.get('sid', 'z5gxl9') # Basit bir kontrol
-            if sid == current_sid:
-                cache["players"] = players_raw
-                cache["count"] = len(players_raw)
-            
-            # DB'ye kaydet
-            if players_raw:
-                update_history_bg(sid, players_raw)
-                
-    threading.Thread(target=background_task).start()
-    return "Veri güncelleme tetiklendi", 200
+    return "1", 200
+    
+def get_fivem_data(current_sid):
+    now = time.time()
 
+    if (
+        CACHE["data"] is not None and
+        CACHE["sid"] == current_sid and
+        now - CACHE["time"] < CACHE_SECONDS
+    ):
+        return CACHE["data"]
+
+    url = f"https://servers-frontend.fivem.net/api/servers/single/{current_sid}"
+    headers = {'User-Agent': 'Mozilla/5.0'}
+
+    response = requests.get(url, headers=headers, timeout=5)
+
+    if response.status_code == 200:
+        CACHE["data"] = response.json().get("Data", {})
+        CACHE["time"] = now
+        CACHE["sid"] = current_sid
+
+    
+    return CACHE["data"]
+    
 import threading # Dosyanın en üstüne bunu eklemeyi unutma!
 
-def update_history_bg(srv_id, players_raw):
-    names_map = {
-        "z5gxl9": "MDPVP", 
-        "z5rgx4": "WELLGUN", 
-        "zrqlap": "LETRA", 
-        "epx97a": "DADDY", 
-        "zem7ky": "GUID"
-    }
-    srv_display_name = names_map.get(srv_id, srv_id) # İsim varsa al, yoksa ID kalsın
-    
-    db = None
+def update_history_bg(current_sid, players_raw):
+    """Veritabanı işlemlerini arka planda yapan işçi fonksiyon"""
     try:
-        # Pymysql değil, senin yukarıdaki get_db_connection fonksiyonunu kullanıyoruz
-        db = get_db_connection()
-        cursor = db.cursor()
+        db_save = get_db_connection()
+        cursor_save = db_save.cursor()
         
         for p in players_raw:
-            p_name = p.get('name', 'Bilinmiyor')
-            ids = p.get('identifiers', [])
+            steam, discord = "Yok", "Bağlı Değil"
+            for identifier in p.get("identifiers", []):
+                if "steam:" in identifier: 
+                    steam = identifier.split(":")[1]
+                elif "discord:" in identifier: 
+                    discord = identifier.split(":")[1]
             
-            # ID'leri güvenli çek (hata vermez)
-            p_steam = next((i.split(":")[1] for i in ids if "steam" in i), "Yok")
-            p_discord = next((i.split(":")[1] for i in ids if "discord" in i), "Bağlı Değil")
-            p_license = next((i.split(":")[1] for i in ids if "license" in i), "Yok")
+            # 1. ADIM: Oyuncunun veritabanındaki EN SON kaydını kontrol et
+            # (Tablonda 'zaman' veya 'id' kolonu hangisiyse ona göre sıralıyoruz)
+            cursor_save.execute("""
+                SELECT p_name, p_discord 
+                FROM player_history 
+                WHERE p_steam = %s 
+                ORDER BY zaman DESC LIMIT 1
+            """, (steam,))
+            
+            last_record = cursor_save.fetchone()
 
-            # Veritabanına yaz veya varsa güncelle
-            sql = """
-            INSERT INTO player_history (srv_id, p_name, p_steam, p_discord, p_license, zaman) 
-            VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
-            ON DUPLICATE KEY UPDATE 
-                p_steam = VALUES(p_steam),
-                p_discord = VALUES(p_discord),
-                p_license = VALUES(p_license),
-                zaman = CURRENT_TIMESTAMP
-            """
-            # Sorguyu çalıştırdığın satırı da böyle güncelle:
-            cursor.execute(sql, (srv_display_name, p_name, p_steam, p_discord, p_license))
-        
-        db.commit()
-        cursor.close()
+            # 2. ADIM: Karar Mekanizması
+            if not last_record:
+                # Oyuncu veritabanında hiç yoksa ilk kaydını oluştur
+                cursor_save.execute("INSERT INTO player_history (srv_id, p_name, p_steam, p_discord) VALUES (%s, %s, %s, %s)",
+                                   (current_sid, p.get("name"), steam, discord))
+                print(f"-> Yeni Oyuncu Kaydedildi: {p.get('name')}")
+            
+            else:
+                old_name = last_record[0]
+                old_discord = last_record[1]
+                
+                # Eğer isim veya discord o günden bugüne değişmişse yeni kayıt at
+                if old_name != p.get("name") or old_discord != discord:
+                    cursor_save.execute("INSERT INTO player_history (srv_id, p_name, p_steam, p_discord) VALUES (%s, %s, %s, %s)",
+                                       (current_sid, p.get("name"), steam, discord))
+                    print(f"-> Bilgi Güncellendi (Yeni Kayıt): {p.get('name')}")
+                
+                # Değişiklik yoksa bu 'else' bloğuna bir şey yazmıyoruz, yani pas geçiyor.
+
+        db_save.commit()
+        cursor_save.close()
+        db_save.close()
     except Exception as e:
-        print(f"Veritabanı Hatası: {e}")
-    finally:
-        if db and db.is_connected():
-            db.close()
+        print(f"Arka plan kayıt hatası: {e}")
 
-# home() FONKSİYONUNU BU ŞEKİLDE GÜNCELLE:
 @app.route("/")
 def home():
-    current_sid = request.args.get('sid', 'z5gxl9')
+    current_sid = request.args.get('sid', 'z5gxl9') # Varsayılan server
     current_server = next((s for s in SERVERS if s['id'] == current_sid), SERVERS[0])
     
-    # Veri bekleme yok, doğrudan hazır olan 'cache'i kullan
-    return render_template_string(HTML_TEMPLATE, 
-                                  players=cache.get("players", []), 
-                                  count=cache.get("count", 0), 
-                                  waze_id=WAZE_ID, 
-                                  lilknife_id=LILKNIFE_ID, 
-                                  servers_list=SERVERS, 
-                                  current_server=current_server)
+    players_list = []
+    count = 0
+    
+    try:
+        # 1. Önce sadece FiveM API'den veriyi çekiyoruz (Hızlı işlem)
+        url = f"https://servers-frontend.fivem.net/api/servers/single/{current_sid}"
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0'}
+        
+            data = get_fivem_data(current_sid)
+            players_raw = data.get("players") or []
+            
+            # Ekranda görünecek listeyi hızlıca hazırla
+            for p in players_raw:
+                steam, discord = "Yok", "Bağlı Değil"
+                for identifier in p.get("identifiers", []):
+                    if "steam:" in identifier: steam = identifier.split(":")[1]
+                    elif "discord:" in identifier: discord = identifier.split(":")[1]
+                players_list.append({"id": p.get("id"), "name": p.get("name"), "steam": steam, "discord": discord})
+            
+            count = len(players_list)
+            if count == 0 and data.get("clients"):
+                count = data.get("clients")
 
-# Render'ın portu karıştırmaması için init_db'yi burada güvenli çalıştırıyoruz
-try:
-    init_db()
-except Exception as e:
-    print(f"İlk açılış DB hatası pas geçildi: {e}")
+            count = len(players_list)
+            
+            # --- SIRALAMA BURAYA GELİYOR ---
+            # ID'leri sayıya çevirerek (int) küçükten büyüğe sıralar
+            players_list.sort(key=lambda x: int(x['id']))
+            # ------------------------------
+
+            if count == 0 and data.get("clients"):
+                count = data.get("clients")
+
+            # 2. KRİTİK NOKTA: Veritabanı işini arka plana at ve bekleme!
+            # Bu satır sayesinde site veritabanını beklemeden açılır.
+            threading.Thread(target=update_history_bg, args=(current_sid, players_raw)).start()
+
+    except Exception as e:
+        print(f"Ana sayfa hatası: {e}")
+
+    # 3. Hemen sayfayı render et (Kullanıcı beklemesin)
+    return render_template_string(HTML_TEMPLATE, players=players_list, count=count, waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(debug=False, host='0.0.0.0', port=port)
+    init_db()
+    app.run(debug=False, host='0.0.0.0', port=5000)
