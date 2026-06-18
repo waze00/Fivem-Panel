@@ -4,6 +4,7 @@ import mysql.connector
 import threading
 import time
 from flask import Flask, render_template_string, url_for, request
+from curl_cffi import requests as curl_requests
 
 app = Flask(__name__)
 
