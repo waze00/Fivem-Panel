@@ -391,18 +391,16 @@ def update_history_bg(current_sid, players_raw):
 
 @app.route("/")
 def home():
-    current_sid = request.args.get('sid', 'z5gxl9') # Varsayılan server
+    current_sid = request.args.get('sid', 'z5gxl9')
     current_server = next((s for s in SERVERS if s['id'] == current_sid), SERVERS[0])
-    
+
     players_list = []
     count = 0
-    
-        try:
-        # 1. FiveM API'den veri çek
+
+    try:
         data = get_fivem_data(current_sid)
         players_raw = data.get("players") or []
 
-        # 2. Oyuncu listesini hazırla
         for p in players_raw:
             steam, discord = "Yok", "Bağlı Değil"
 
@@ -419,16 +417,13 @@ def home():
                 "discord": discord
             })
 
-        # 3. Oyuncu sayısı
         count = len(players_list)
 
         if count == 0 and data.get("clients"):
             count = data.get("clients")
 
-        # 4. ID sıralama
         players_list.sort(key=lambda x: int(x['id']))
 
-        # 5. DB işlemini arka plana at
         threading.Thread(
             target=update_history_bg,
             args=(current_sid, players_raw),
@@ -438,8 +433,15 @@ def home():
     except Exception as e:
         print(f"Ana sayfa hatası: {e}")
 
-    # 3. Hemen sayfayı render et (Kullanıcı beklemesin)
-    return render_template_string(HTML_TEMPLATE, players=players_list, count=count, waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
+    return render_template_string(
+        HTML_TEMPLATE,
+        players=players_list,
+        count=count,
+        waze_id=WAZE_ID,
+        lilknife_id=LILKNIFE_ID,
+        servers_list=SERVERS,
+        current_server=current_server
+    )
 
 if __name__ == "__main__":
     init_db()
