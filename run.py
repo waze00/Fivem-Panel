@@ -329,7 +329,7 @@ def get_fivem_data(current_sid):
     ):
         return CACHE["data"]
 
-    # Sadece bu aşağıdaki satırı senin proxy'yi kullanacak şekilde değiştirdik:
+    # Sadece bu url satırı kalmalı, altındaki eski url tanımlarını sil
     url = f"{PROXY_URL}/api/servers/single/{current_sid}"
     
     headers = {
@@ -339,11 +339,13 @@ def get_fivem_data(current_sid):
     }
 
     try:
-        # Standart requests yerine Cloudflare'i geçen curl_requests kullanıyoruz
         response = curl_requests.get(url, headers=headers, impersonate="chrome", timeout=10)
 
         if response.status_code == 200:
-            CACHE["data"] = response.json().get("Data", {})
+            import json
+            response_data = json.loads(response.text)
+            
+            CACHE["data"] = response_data.get("Data", {})
             CACHE["time"] = now
             CACHE["sid"] = current_sid
             print(f"-> {current_sid} verisi FiveM API'den basariyla cekildi.")
