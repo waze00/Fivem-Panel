@@ -314,7 +314,7 @@ function filterTable() {
 @app.route("/ping")
 def ping():
     return "1", 200
-    
+
 def get_fivem_data(current_sid):
     now = time.time()
 
@@ -326,17 +326,29 @@ def get_fivem_data(current_sid):
         return CACHE["data"]
 
     url = f"https://servers-frontend.fivem.net/api/servers/single/{current_sid}"
-    headers = {'User-Agent': 'Mozilla/5.0'}
-
-    response = requests.get(url, headers=headers, timeout=5)
-
-    if response.status_code == 200:
-        CACHE["data"] = response.json().get("Data", {})
-        CACHE["time"] = now
-        CACHE["sid"] = current_sid
-
     
-    return CACHE["data"]
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+        'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7'
+    }
+
+    try:
+        # Standart requests yerine Cloudflare'i geçen curl_requests kullanıyoruz
+        response = curl_requests.get(url, headers=headers, impersonate="chrome", timeout=10)
+
+        if response.status_code == 200:
+            CACHE["data"] = response.json().get("Data", {})
+            CACHE["time"] = now
+            CACHE["sid"] = current_sid
+            print(f"-> {current_sid} verisi FiveM API'den basariyla cekildi.")
+        else:
+            print(f"-> FiveM API Hatasi! Durum Kodu: {response.status_code}")
+            
+    except Exception as e:
+        print(f"-> API baglanti hatasi: {e}")
+    
+    return CACHE["data"] if CACHE["data"] is not None else {}
     
 import threading # Dosyanın en üstüne bunu eklemeyi unutma!
 
