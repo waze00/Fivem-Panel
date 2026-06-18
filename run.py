@@ -9,7 +9,7 @@ from curl_cffi import requests as curl_requests
 app = Flask(__name__)
 
 # --- PROXY YAPILANDIRMASI ---
-PROXY_URL = "https://sharkspanel.mustafaefe4998.workers.dev"
+PROXY_URL = "https://fivem-api.w3b.net"
 
 # Takip etmek istediğin sunucuların ID'lerini buraya ekle
 SUNUCU_IDLERI = ["z5gxl9", "z5rgx4", "zrqlap", "epx97a", "zem7ky" ]
