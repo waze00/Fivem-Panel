@@ -1,5 +1,5 @@
 import os
-import requests
+import requests    
 import mysql.connector
 import threading
 from flask import Flask, render_template_string, url_for, request
@@ -219,8 +219,8 @@ HTML_TEMPLATE = """
     </div>
 
     <div class="social-box">
-        <a href="https://discord.gg/a51" target="_blank" class="discord-link">
-            <i class="fab fa-discord"></i> discord.gg/a51
+        <a href="https://discord.gg/shrks" target="_blank" class="discord-link">
+            <i class="fab fa-discord"></i> discord.gg/shrks
         </a>
     </div>
 </nav>
