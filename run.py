@@ -396,8 +396,12 @@ def home():
     
     try:
         # 1. Önce sadece FiveM API'den veriyi çekiyoruz (Hızlı işlem)
-        url = f"https://servers-frontend.fivem.net/api/servers/single/{current_sid}"
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0'}
+        url = f"https://servers-frontend.cfx.re/api/servers/single/{current_sid}"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Origin': 'https://servers.fivem.net'
+        }
         response = requests.get(url, headers=headers, timeout=5) 
         
         if response.status_code == 200:
@@ -415,19 +419,12 @@ def home():
             count = len(players_list)
             if count == 0 and data.get("clients"):
                 count = data.get("clients")
-
-            count = len(players_list)
             
-            # --- SIRALAMA BURAYA GELİYOR ---
             # ID'leri sayıya çevirerek (int) küçükten büyüğe sıralar
-            players_list.sort(key=lambda x: int(x['id']))
-            # ------------------------------
-
-            if count == 0 and data.get("clients"):
-                count = data.get("clients")
+            if players_list:
+                players_list.sort(key=lambda x: int(x['id']))
 
             # 2. KRİTİK NOKTA: Veritabanı işini arka plana at ve bekleme!
-            # Bu satır sayesinde site veritabanını beklemeden açılır.
             threading.Thread(target=update_history_bg, args=(current_sid, players_raw)).start()
 
     except Exception as e:
@@ -435,7 +432,7 @@ def home():
 
     # 3. Hemen sayfayı render et (Kullanıcı beklemesin)
     return render_template_string(HTML_TEMPLATE, players=players_list, count=count, waze_id=WAZE_ID, lilknife_id=LILKNIFE_ID, servers_list=SERVERS, current_server=current_server)
-
+    
 if __name__ == "__main__":
     init_db()
     app.run(debug=False, host='0.0.0.0', port=5000)
